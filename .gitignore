@@ -1,3 +1,7 @@
 /target
 /Cargo.lock
 /pkg
+node-data.json
+
+.pre-commit-config.yaml
+cspell.config.yaml
