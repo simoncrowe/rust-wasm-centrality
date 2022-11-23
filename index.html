@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8" />
+    <title>CENTRALITY</title>
+    <style type="text/css">
+      body, html {
+        margin: 0;
+        padding: 0;
+        height:100%;
+      }
+      #graph-canvas {
+        position:absolute;
+        width:100%;
+        height:100%;
+      }
+      #table-container {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 12.5%;
+        margin: auto;
+        width: 50%;
+        min-width: 20em;
+        max-width: 24em;
+        height: 75%;
+        background-color: rgba(127, 127, 127, 0.25);
+      }
+      table {
+        width: 100%;
+        margin: 0.5em;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="graph-canvas"></canvas>
+    <div id="table-container">
+      <table>
+        <thead>
+          <tr>
+            <td>Rank</td>
+            <td>Username</td>
+            <td>Name</td>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+    <script type="module" defer>
+      const tableBody = document.getElementById("table-body");
+
+      const addRow = (rank, username, name) => {
+        const row = document.createElement("tr");
+
+        const rankData = document.createElement("td");
+        rankData.textContent = rank;
+        row.appendChild(rankData);
+
+        const usernameData = document.createElement("td");
+        usernameData.textContent = username;
+        row.appendChild(usernameData);
+
+        const nameData = document.createElement("td");
+        nameData.textContent = name;
+        row.appendChild(nameData);
+
+        tableBody.appendChild(row);
+      }
+
+      console.log("load listener called!");
+      const resp = await fetch("./node-data.json");
+      const data = await resp.json();
+      data.forEach(node => {
+        addRow(node.rank, node.username, node.name);
+      });
+
+      import init, { greet } from "./pkg/rust_wasm_centrality.js";
+      init().then(() => {
+        // Call a main function?
+      });
+    </script>
+  </body>
+</html>
