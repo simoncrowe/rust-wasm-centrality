@@ -1,7 +1,8 @@
 /target
 /Cargo.lock
 /pkg
-node-data.json
+nodes.json
+edges.bin
 
 .pre-commit-config.yaml
 cspell.config.yaml
