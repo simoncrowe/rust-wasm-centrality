@@ -1,6 +1,7 @@
-use js_sys::Uint8Array;
+use js_sys::Reflect::get;
+use js_sys::{Object, Uint8Array};
 use wasm_bindgen::prelude::*;
-use wasm_bindgen::JsCast;
+use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{ReadableStreamDefaultReader, Response};
 #[wasm_bindgen]
@@ -19,19 +20,14 @@ pub async fn fetch_and_compute_graph() -> Result<JsValue, JsValue> {
     if resp.status() != 200 {
         return Err(JsValue::FALSE);
     }
-    let reader_obj = resp.body().unwrap().get_reader();
-    let stream_reader: ReadableStreamDefaultReader = reader_obj.dyn_into().unwrap();
-    loop {
-        let chunk_obj = JsFuture::from(stream_reader.read()).await?;
-        let chunk_bytes: Uint8Array = chunk_obj.dyn_into().unwrap();
-        log(&"Cast chunk obj to uint8Array");
-        log(&format!(
-            "Got a chunk of length {} from the promise!",
-            chunk_bytes.length()
-        ));
-        //let bytes = serde_wasm_bindgen::from_value(js_bytes)?;
-    }
+    let reader_value = resp.body().unwrap().get_reader();
+    let reader: ReadableStreamDefaultReader = reader_value.dyn_into().unwrap();
+    let result_value = JsFuture::from(reader.read()).await?;
+    let result: Object = result_value.dyn_into().unwrap();
+    let chunk_value = get(&result, &JsValue::from_str("value")).unwrap();
+    let chunk_array: Uint8Array = chunk_value.dyn_into().unwrap();
+    let chunk = chunk_array.to_vec();
+    log(&format!("Got chunk of length: {}", chunk.len()));
 
     Ok(JsValue::TRUE)
-    //iErr(JsValue::FALSE)
 }
