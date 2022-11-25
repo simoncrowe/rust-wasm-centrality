@@ -81,16 +81,17 @@
       PIXI.utils.sayHello(type);
 
 
-      import init, { fetch_and_compute_graph } from "./pkg/rust_wasm_centrality.js";
+      import init, { Graph } from "./pkg/rust_wasm_centrality.js";
       init().then(async () => {
+        const graph = Graph.new();
         let result;
         try {
-          result = await fetch_and_compute_graph();
+          result = await graph.load_edges();
         } catch(err) {
           result = err;
         }
         // Result is a boolean for now
-        console.log(`Loading graph result: ${result}`);
+        console.log(`Loading edges result: ${result}`);
       });
     </script>
   </body>

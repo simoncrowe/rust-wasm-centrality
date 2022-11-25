@@ -14,13 +14,10 @@ crate-type = ["cdylib"]
 lto = "thin"
 
 [dependencies]
+byteorder = "1.4.3"
+js-sys = "0.3.60"
 wasm-bindgen = "0.2.63"
 wasm-bindgen-futures = "0.4.33"
-js-sys = "0.3.60"
-serde = { version = "1.0", features = ["derive"] }
-serde_bytes = "0.11"
-serde-wasm-bindgen = "0.4"
-
 
 [dependencies.web-sys]
 version = "0.3.60"
