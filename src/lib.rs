@@ -13,19 +13,46 @@ extern "C" {
 }
 
 #[wasm_bindgen]
+pub fn get_memory() -> JsValue {
+    wasm_bindgen::memory()
+}
+
+#[wasm_bindgen]
 pub struct Graph {
     node_targets: HashMap<u16, Vec<u16>>,
+    node_locations: HashMap<u16, Vec<u32>>,
 }
 
 #[wasm_bindgen]
 impl Graph {
     pub fn new() -> Graph {
         let node_targets = HashMap::new();
-        Graph { node_targets }
+        let node_locations = HashMap::new();
+        Graph {
+            node_targets,
+            node_locations,
+        }
     }
-    pub async fn load_edges(&mut self) -> Result<JsValue, JsValue> {
+
+    pub fn node_count(&mut self) -> usize {
+        self.node_targets.len()
+    }
+
+    pub fn node_targets_count(&mut self, node_id: u16) -> usize {
+        self.node_targets.get(&node_id).unwrap().len()
+    }
+
+    pub fn node_targets_ptr(&mut self, node_id: u16) -> *const u16 {
+        self.node_targets.get(&node_id).unwrap().as_ptr()
+    }
+
+    pub fn node_location_ptr(&mut self, node_id: u16) -> *const u32 {
+        self.node_locations.get(&node_id).unwrap().as_ptr()
+    }
+
+    pub async fn load_edges(&mut self) -> Result<(), JsValue> {
         let window = web_sys::window().unwrap();
-        let resp_promise = window.fetch_with_str(&"./edges.bin");
+        let resp_promise = window.fetch_with_str(&"./targets.bin");
         let resp_value = JsFuture::from(resp_promise).await?;
         let resp: Response = resp_value.dyn_into().unwrap();
         log(&format!("Response status code: {}", resp.status()));
@@ -36,6 +63,7 @@ impl Graph {
         let reader: ReadableStreamDefaultReader = reader_value.dyn_into().unwrap();
 
         let mut current_node_id: u16 = 1;
+        self.node_locations.insert(current_node_id, vec![0u32; 2]);
         self.node_targets.insert(current_node_id, Vec::new());
         log(&format!("Getting targets for node {}", current_node_id));
         loop {
@@ -45,7 +73,10 @@ impl Graph {
             let done_value = get(&result, &JsValue::from_str("done")).unwrap();
             log(&"Got a 'done' value from the object!");
             if done_value.as_bool().unwrap() {
-                log(&"Done. Got all the chunks!");
+                log(&format!(
+                    "Done. Loaded targets for {} nodes",
+                    current_node_id - 1
+                ));
                 break;
             }
             let chunk_value = get(&result, &JsValue::from_str("value")).unwrap();
@@ -58,12 +89,13 @@ impl Graph {
             log(&"Instantiated a new u16 vector!");
             LittleEndian::read_u16_into(&chunk_buffer, &mut numbers);
             log(&"Filled u16 vector from the buffer!");
+            log(&format!("Getting targets for node {}...", current_node_id));
             for &num in numbers.iter() {
                 if num == u16::MAX {
                     // The MAX acts as a delimiter
                     current_node_id += 1;
+                    self.node_locations.insert(current_node_id, vec![0; 2]);
                     self.node_targets.insert(current_node_id, Vec::new());
-                    log(&format!("Getting targets for node {}", current_node_id));
                 } else {
                     self.node_targets
                         .get_mut(&current_node_id)
@@ -73,10 +105,6 @@ impl Graph {
             }
         }
 
-        for (node_id, targets) in self.node_targets.iter() {
-            log(&format!("Node {} has {} targets", node_id, targets.len()));
-        }
-
-        Ok(JsValue::TRUE)
+        Ok(())
     }
 }

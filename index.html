@@ -81,17 +81,45 @@
       PIXI.utils.sayHello(type);
 
 
-      import init, { Graph } from "./pkg/rust_wasm_centrality.js";
+      import init, { get_memory, Graph } from "./pkg/rust_wasm_centrality.js";
       init().then(async () => {
         const graph = Graph.new();
-        let result;
         try {
-          result = await graph.load_edges();
+          await graph.load_edges();
         } catch(err) {
-          result = err;
+          console.log(err);
         }
-        // Result is a boolean for now
-        console.log(`Loading edges result: ${result}`);
+
+        const wasmMemory = get_memory();
+        const targetCount = graph.node_targets_count(1);
+        const targetPtr = graph.node_targets_ptr(1);
+        const nodeLocations = {}
+        const nodeTargets = {}
+
+        const renderGraph = () => {
+          const nodeCount = graph.node_count();
+          for (let nodeId = 1; nodeId <= nodeCount; nodeId++) {
+            if (!(nodeId in nodeTargets)) {
+              let targetsCount = graph.node_targets_count(nodeId);
+              let targetsPtr = graph.node_targets_ptr(nodeId);
+              let targets = new Uint16Array(wasmMemory.buffer, targetsPtr,targetsCount);
+              nodeTargets[nodeId] = targets;
+              console.log(`Node ${nodeId} has ${targetsCount} targets`);
+            } else {
+              let targets = nodeTargets[nodeId];
+            }
+            if (!(nodeId in nodeLocations)) {
+              let locPtr = graph.node_location_ptr(nodeId);
+              let loc = new Uint32Array(wasmMemory.buffer, locPtr, 2);
+              nodeLocations[nodeId] = loc;
+              console.log(`Location ${loc} loaded for node ${nodeId}`);
+            } else {
+              let loc = nodeLocations[nodeId];
+            }
+          }
+          requestAnimationFrame(renderGraph);
+        }
+        requestAnimationFrame(renderGraph);
       });
     </script>
   </body>
