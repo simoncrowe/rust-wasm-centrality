@@ -81,28 +81,28 @@
       PIXI.utils.sayHello(type);
 
 
-      import init, { get_memory, Graph } from "./pkg/rust_wasm_centrality.js";
+      import init, { get_memory, Rect, Graph } from "./pkg/rust_wasm_centrality.js";
       init().then(async () => {
         const graph = Graph.new();
         try {
           await graph.load_edges();
         } catch(err) {
-          console.log(err);
+          console.error(err);
         }
 
         const wasmMemory = get_memory();
-        const targetCount = graph.node_targets_count(1);
-        const targetPtr = graph.node_targets_ptr(1);
         const nodeLocations = {}
         const nodeTargets = {}
 
         const renderGraph = () => {
-          const nodeCount = graph.node_count();
-          for (let nodeId = 1; nodeId <= nodeCount; nodeId++) {
+          const renderRect = Rect.new([0,0], [10, 10]);
+          const renderIds = graph.node_ids_to_render(renderRect);
+          console.log(renderIds);
+          renderIds.forEach((nodeId) => {
             if (!(nodeId in nodeTargets)) {
               let targetsCount = graph.node_targets_count(nodeId);
               let targetsPtr = graph.node_targets_ptr(nodeId);
-              let targets = new Uint16Array(wasmMemory.buffer, targetsPtr,targetsCount);
+              let targets = new Uint32Array(wasmMemory.buffer, targetsPtr,targetsCount);
               nodeTargets[nodeId] = targets;
               console.log(`Node ${nodeId} has ${targetsCount} targets`);
             } else {
@@ -110,13 +110,13 @@
             }
             if (!(nodeId in nodeLocations)) {
               let locPtr = graph.node_location_ptr(nodeId);
-              let loc = new Uint32Array(wasmMemory.buffer, locPtr, 2);
+              let loc = new Float64Array(wasmMemory.buffer, locPtr, 2);
               nodeLocations[nodeId] = loc;
               console.log(`Location ${loc} loaded for node ${nodeId}`);
             } else {
               let loc = nodeLocations[nodeId];
             }
-          }
+          });
           requestAnimationFrame(renderGraph);
         }
         requestAnimationFrame(renderGraph);
