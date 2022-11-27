@@ -2,7 +2,8 @@
 <html lang="en-US">
   <head>
     <meta charset="utf-8" />
-    <title>CENTRALITY</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GRAPH</title>
     <style type="text/css">
       body, html {
         margin: 0;
@@ -20,63 +21,125 @@
         right: 0;
         top: 12.5%;
         margin: auto;
-        width: 50%;
-        min-width: 20em;
-        max-width: 24em;
+        width: 320px;
         height: 75%;
+        overflow-x: clip;
+        overflow-y: scroll;
         background-color: rgba(127, 127, 127, 0.25);
       }
       table {
         width: 100%;
         margin: 0.5em;
+        font-size: 0.9em;
       }
     </style>
+    <script src="pixi.min.js"></script>
   </head>
   <body>
     <canvas id="graph-canvas"></canvas>
     <div id="table-container">
       <table>
-        <thead>
-          <tr>
-            <td>Rank</td>
-            <td>Username</td>
-            <td>Name</td>
-          </tr>
-        </thead>
         <tbody id="table-body"></tbody>
       </table>
     </div>
     <script type="module" defer>
       const tableBody = document.getElementById("table-body");
 
-      const addRow = (rank, username, name) => {
+      const addRow = (rank, name, username) => {
         const row = document.createElement("tr");
 
         const rankData = document.createElement("td");
         rankData.textContent = rank;
         row.appendChild(rankData);
 
-        const usernameData = document.createElement("td");
-        usernameData.textContent = username;
-        row.appendChild(usernameData);
-
+        let accountText;
+        if (name !== '') {
+          accountText = document.createTextNode(name);
+        } else {
+          accountText = document.createTextNode(username);
+        }
+        const accountLink = document.createElement("a");
+        accountLink.appendChild(accountText);
+        accountLink.href = `https://instagram.com/${username}`;
+        accountLink.target = '_blank';
         const nameData = document.createElement("td");
-        nameData.textContent = name;
-        row.appendChild(nameData);
+        row.appendChild(accountLink);
 
         tableBody.appendChild(row);
       }
 
-      console.log("load listener called!");
-      const resp = await fetch("./node-data.json");
+      const resp = await fetch("./nodes.json");
       const data = await resp.json();
       data.forEach(node => {
-        addRow(node.rank, node.username, node.name);
+        addRow(node.rank, node.name, node.username);
       });
 
-      import init, { greet } from "./pkg/rust_wasm_centrality.js";
-      init().then(() => {
-        // Call a main function?
+
+      import init, { get_memory, Rect, Graph } from "./pkg/rust_wasm_centrality.js";
+      init().then(async () => {
+        const spawnRectScale = 16;
+        const graph = Graph.new(window.innerWidth, window.innerHeight, spawnRectScale);
+        try {
+          await graph.load_edges();
+        } catch(err) {
+          console.error(err);
+        }
+
+        const pixiApp = new PIXI.Application({resizeTo: window, backgroundColor: 0xFFFFFF});
+        document.body.appendChild(pixiApp.view);
+
+        const wasmMemory = get_memory();
+        const nodeLocations = new Map();
+        const nodeTargets = new Map();
+        const nodeGraphics = new Map();
+
+        pixiApp.ticker.add(() => {
+          for (let graphics of nodeGraphics.values()) {
+            graphics.clear();
+          }
+          const renderRect = Rect.new([0,0], [window.innerWidth, window.innerHeight]);
+          const renderIds = graph.node_ids_to_render(renderRect);
+          renderIds.forEach((nodeId) => {
+            let targets = nodeTargets.get(nodeId);
+            if (targets === undefined) {
+              let targetsCount = graph.node_targets_count(nodeId);
+              let targetsPtr = graph.node_targets_ptr(nodeId);
+              targets = new Uint32Array(wasmMemory.buffer, targetsPtr,targetsCount);
+              nodeTargets.set(nodeId, targets);
+            }
+
+            let loc = nodeLocations.get(nodeId);
+            if (loc === undefined) {
+              let locPtr = graph.node_location_ptr(nodeId);
+              loc = new Float64Array(wasmMemory.buffer, locPtr, 2);
+              nodeLocations.set(nodeId, loc);
+            }
+
+            let graphics = nodeGraphics.get(nodeId);
+            if (graphics === undefined) {
+              graphics = new PIXI.Graphics();
+              pixiApp.stage.addChild(graphics);
+              nodeGraphics.set(nodeId, graphics);
+            }
+
+            graphics.beginFill(0x000000);
+            graphics.drawCircle(loc[0], loc[1], 3);
+            graphics.lineStyle(1, 0x000000, 1);
+
+            /*for (let i = 0; i < targets.length; i++){
+              let targetId = targets[i];
+              let targetLoc = nodeLocations.get(targetId);
+              if (targetLoc === undefined) {
+                let locPtr = graph.node_location_ptr(targetId);
+                targetLoc = new Float64Array(wasmMemory.buffer, locPtr, 2);
+                nodeLocations.set(targetId, loc);
+              }
+              graphics.moveTo(loc[0], loc[1]);
+              graphics.lineTo(targetLoc[0], targetLoc[1]);
+            }*/
+          });
+
+        });
       });
     </script>
   </body>
