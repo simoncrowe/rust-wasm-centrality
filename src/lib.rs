@@ -1,7 +1,9 @@
 use byteorder::{ByteOrder, LittleEndian};
 use js_sys::Reflect::get;
 use js_sys::{Object, Uint8Array};
-use std::cmp;
+use std::collections::HashMap;
+use std::iter::Chain;
+use std::slice::Iter;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
@@ -20,23 +22,27 @@ pub fn get_memory() -> JsValue {
 #[wasm_bindgen]
 pub struct Graph {
     node_targets: Vec<Vec<usize>>,
+    node_sources: HashMap<usize, Vec<usize>>,
     node_locations: Vec<Vec<f64>>,
+    spawn_width: f64,
+    spawn_height: f64,
 }
 
 #[wasm_bindgen]
 impl Graph {
-    pub fn new() -> Graph {
+    pub fn new(display_width: f64, display_height: f64, spawn_scale: f64) -> Graph {
         let node_targets = Vec::new();
+        let node_sources = HashMap::new();
         let node_locations = Vec::new();
+        let spawn_height = display_height * spawn_scale;
+        let spawn_width = display_width * spawn_scale;
         Graph {
             node_targets,
+            node_sources,
             node_locations,
+            spawn_width,
+            spawn_height,
         }
-    }
-
-    pub fn node_count(&self) -> usize {
-        // TODO: delete if unused
-        cmp::min(self.node_targets.len(), self.node_locations.len())
     }
 
     pub fn node_targets_count(&self, node_id: usize) -> usize {
@@ -90,10 +96,10 @@ impl Graph {
         let reader_value = resp.body().unwrap().get_reader();
         let reader: ReadableStreamDefaultReader = reader_value.dyn_into().unwrap();
 
-        self.node_locations.push(random_location(1024.0));
+        let loc = random_location(self.spawn_width, self.spawn_height);
+        self.node_locations.push(loc);
         self.node_targets.push(Vec::new());
         let mut current_node_index: usize = 0;
-        log(&format!("Getting targets for node {}", current_node_index));
         loop {
             let result_value = JsFuture::from(reader.read()).await?;
             let result: Object = result_value.dyn_into().unwrap();
@@ -124,14 +130,22 @@ impl Graph {
             for &num in numbers.iter() {
                 // The MAX acts as a delimiter
                 if num == u16::MAX {
-                    self.node_locations.push(random_location(1024.0));
+                    let loc = random_location(self.spawn_width, self.spawn_height);
+                    self.node_locations.push(loc);
                     self.node_targets.push(Vec::new());
                     current_node_index += 1;
                 } else {
+                    let target_index = num as usize;
                     self.node_targets
                         .get_mut(current_node_index)
                         .unwrap()
-                        .push(num as usize);
+                        .push(target_index);
+                    if let Some(sources) = self.node_sources.get_mut(&target_index) {
+                        sources.push(current_node_index);
+                    } else {
+                        self.node_sources
+                            .insert(target_index, vec![current_node_index]);
+                    }
                 }
             }
         }
@@ -142,21 +156,15 @@ impl Graph {
 
 impl Graph {
     fn neighbours(&self, node_index: usize) -> Vec<usize> {
-        let mut neighbours: Vec<usize> = self
-            .node_targets
-            .iter()
-            .enumerate()
-            .filter(|(_idx, targets)| targets.contains(&node_index))
-            .map(|(idx, _targets)| idx)
-            .collect();
-        neighbours.extend(self.node_targets.get(node_index).unwrap());
-        neighbours
+        let mut neighbouring_indices = self.node_sources.get(&node_index).unwrap().to_vec();
+        neighbouring_indices.extend(self.node_targets.get(node_index).unwrap());
+        neighbouring_indices
     }
 }
 
-fn random_location(scale: f64) -> Vec<f64> {
-    let x_loc = js_sys::Math::random() * scale;
-    let y_loc = js_sys::Math::random() * scale;
+fn random_location(scale_x: f64, scale_y: f64) -> Vec<f64> {
+    let x_loc = js_sys::Math::random() * scale_x;
+    let y_loc = js_sys::Math::random() * scale_y;
     vec![x_loc, y_loc]
 }
 
