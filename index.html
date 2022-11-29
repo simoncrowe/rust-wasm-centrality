@@ -77,8 +77,8 @@
 
       import init, { get_memory, Rect, Graph } from "./pkg/rust_wasm_centrality.js";
       init().then(async () => {
-        const spawnRectScale = 16;
-        const graph = Graph.new(window.innerWidth, window.innerHeight, spawnRectScale);
+        const spawnRectScale = 12;
+        const graph = Graph.new(20039, window.innerWidth, window.innerHeight, spawnRectScale);
         try {
           await graph.load_edges();
         } catch(err) {
@@ -98,7 +98,7 @@
             graphics.clear();
           }
           const renderRect = Rect.new([0,0], [window.innerWidth, window.innerHeight]);
-          const renderIds = graph.node_ids_to_render(renderRect);
+          const renderIds = graph.node_ids_to_render_imp(renderRect);
           renderIds.forEach((nodeId) => {
             let targets = nodeTargets.get(nodeId);
             if (targets === undefined) {
