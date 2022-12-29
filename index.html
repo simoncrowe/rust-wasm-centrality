@@ -75,7 +75,7 @@
       });
 
 
-      import init, { get_memory, Rect, Graph } from "./pkg/rust_wasm_centrality.js";
+      import init, { init_panic_hook, get_memory, Rect, Graph } from "./pkg/rust_wasm_centrality.js";
       init().then(async () => {
         const spawnRectScale = 12;
         const graph = Graph.new(20039, window.innerWidth, window.innerHeight, spawnRectScale);
@@ -88,6 +88,7 @@
         const pixiApp = new PIXI.Application({resizeTo: window, backgroundColor: 0xFFFFFF});
         document.body.appendChild(pixiApp.view);
 
+        init_panic_hook();
         const wasmMemory = get_memory();
         const nodeLocations = new Map();
         const nodeTargets = new Map();

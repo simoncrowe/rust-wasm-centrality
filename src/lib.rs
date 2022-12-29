@@ -6,6 +6,9 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{window, ReadableStreamDefaultReader, Response};
+extern crate console_error_panic_hook;
+use std::panic;
+
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = console)]
@@ -14,6 +17,11 @@ extern "C" {
 
 macro_rules! console_log {
     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
+}
+
+#[wasm_bindgen]
+pub fn init_panic_hook() {
+    panic::set_hook(Box::new(console_error_panic_hook::hook));
 }
 
 #[wasm_bindgen]
