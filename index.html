@@ -77,71 +77,45 @@
 
       import init, { init_panic_hook, get_memory, Rect, Graph } from "./pkg/rust_wasm_centrality.js";
       init().then(async () => {
-        const spawnRectScale = 12;
-        const graph = Graph.new(20039, window.innerWidth, window.innerHeight, spawnRectScale);
-        try {
-          await graph.load_edges();
-        } catch(err) {
-          console.error(err);
-        }
-
-        const pixiApp = new PIXI.Application({resizeTo: window, backgroundColor: 0xFFFFFF});
-        document.body.appendChild(pixiApp.view);
-
         init_panic_hook();
         const wasmMemory = get_memory();
         const nodeLocations = new Map();
         const nodeTargets = new Map();
-        const nodeGraphics = new Map();
 
-        pixiApp.ticker.add(() => {
-          for (let graphics of nodeGraphics.values()) {
-            graphics.clear();
-          }
-          const renderRect = Rect.new([0,0], [window.innerWidth, window.innerHeight]);
-          const renderIds = graph.node_ids_to_render(renderRect);
-          renderIds.forEach((nodeId) => {
-            let targets = nodeTargets.get(nodeId);
-            if (targets === undefined) {
-              let targetsCount = graph.node_targets_count(nodeId);
-              let targetsPtr = graph.node_targets_ptr(nodeId);
-              targets = new Uint32Array(wasmMemory.buffer, targetsPtr,targetsCount);
-              nodeTargets.set(nodeId, targets);
-            }
+        fetch("./targets.bin")
+          .then(async response => {
+            const respReader = response.body.getReader();
+            const spawnRectScale = 12;
+            const graph = Graph.new(20039, window.innerWidth, window.innerHeight, spawnRectScale);
 
-            let loc = nodeLocations.get(nodeId);
-            if (loc === undefined) {
-              let locPtr = graph.node_location_ptr(nodeId);
-              loc = new Float64Array(wasmMemory.buffer, locPtr, 2);
-              nodeLocations.set(nodeId, loc);
-            }
-
-            let graphics = nodeGraphics.get(nodeId);
-            if (graphics === undefined) {
-              graphics = new PIXI.Graphics();
-              pixiApp.stage.addChild(graphics);
-              nodeGraphics.set(nodeId, graphics);
-            }
-
-            graphics.beginFill(0x000000);
-            graphics.drawCircle(loc[0], loc[1], 3);
-            graphics.lineStyle(1, 0x000000, 1);
-
-            /*for (let i = 0; i < targets.length; i++){
-              let targetId = targets[i];
-              let targetLoc = nodeLocations.get(targetId);
-              if (targetLoc === undefined) {
-                let locPtr = graph.node_location_ptr(targetId);
-                targetLoc = new Float64Array(wasmMemory.buffer, locPtr, 2);
-                nodeLocations.set(targetId, loc);
+            while(true) {
+              const {done, value} = await respReader.read();
+              if (!done) {
+                graph.load_edges(value);
               }
-              graphics.moveTo(loc[0], loc[1]);
-              graphics.lineTo(targetLoc[0], targetLoc[1]);
-            }*/
-          });
 
+              const renderRect = Rect.new([0,0], [window.innerWidth, window.innerHeight]);
+              const renderIds = graph.node_ids_to_render(renderRect);
+              renderIds.forEach((nodeId) => {
+                let targets = nodeTargets.get(nodeId);
+                if (targets === undefined) {
+                  let targetsCount = graph.node_targets_count(nodeId);
+                  let targetsPtr = graph.node_targets_ptr(nodeId);
+                  targets = new Uint32Array(wasmMemory.buffer, targetsPtr,targetsCount);
+                  nodeTargets.set(nodeId, targets);
+                }
+
+                let loc = nodeLocations.get(nodeId);
+                if (loc === undefined) {
+                  let locPtr = graph.node_location_ptr(nodeId);
+                  loc = new Float64Array(wasmMemory.buffer, locPtr, 2);
+                  nodeLocations.set(nodeId, loc);
+                }
+              });
+              await new Promise(r => setTimeout(r, 2000));
+            }
+          });
         });
-      });
     </script>
   </body>
 </html>
