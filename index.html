@@ -98,7 +98,7 @@
             graphics.clear();
           }
           const renderRect = Rect.new([0,0], [window.innerWidth, window.innerHeight]);
-          const renderIds = graph.node_ids_to_render_imp(renderRect);
+          const renderIds = graph.node_ids_to_render(renderRect);
           renderIds.forEach((nodeId) => {
             let targets = nodeTargets.get(nodeId);
             if (targets === undefined) {

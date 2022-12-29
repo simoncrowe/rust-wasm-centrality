@@ -1,5 +1,4 @@
 use byteorder::{ByteOrder, LittleEndian};
-use itertools::Itertools;
 
 use js_sys::Reflect::get;
 use js_sys::{Object, Uint8Array};
@@ -63,7 +62,7 @@ impl Graph {
         self.node_locations.get(node_id).unwrap().as_ptr()
     }
 
-    pub fn node_ids_to_render_imp(&self, rect: Rect) -> Vec<usize> {
+    pub fn node_ids_to_render(&self, rect: Rect) -> Vec<usize> {
         let perf = window().unwrap().performance().unwrap();
         let start = perf.now();
 
@@ -81,36 +80,6 @@ impl Graph {
             }
         }
         let result = indices.into_iter().collect::<Vec<usize>>();
-
-        let elapsed = perf.now() - start;
-        console_log!("node_ids_to_render took {} ms", elapsed);
-
-        result
-    }
-
-    pub fn node_ids_to_render(&self, rect: Rect) -> Vec<usize> {
-        let perf = window().unwrap().performance().unwrap();
-        let start = perf.now();
-
-        let contained_indices = self
-            .node_locations
-            .iter()
-            .enumerate()
-            .filter(|(_idx, loc)| rect.contains(loc))
-            .map(|(idx, _loc)| idx)
-            .collect::<Vec<usize>>();
-
-        let neighbouring_indices = contained_indices
-            .iter()
-            .map(|idx| self.neighbours(idx))
-            .flatten();
-
-        let result = contained_indices
-            .iter()
-            .chain(neighbouring_indices)
-            .unique()
-            .map(|idx| *idx)
-            .collect();
 
         let elapsed = perf.now() - start;
         console_log!("node_ids_to_render took {} ms", elapsed);
@@ -175,17 +144,6 @@ impl Graph {
         }
 
         Ok(())
-    }
-}
-
-impl Graph {
-    fn neighbours(
-        &self,
-        node_index: &usize,
-    ) -> std::iter::Chain<std::slice::Iter<usize>, std::slice::Iter<usize>> {
-        let sources = self.node_sources.get(*node_index).unwrap().into_iter();
-        let targets = self.node_targets.get(*node_index).unwrap().into_iter();
-        sources.chain(targets)
     }
 }
 
