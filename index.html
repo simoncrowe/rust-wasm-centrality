@@ -112,7 +112,8 @@
                   nodeLocations.set(nodeId, loc);
                 }
               });
-              await new Promise(r => setTimeout(r, 2000));
+              // TODO: render one or more frames
+              await new Promise(r => setTimeout(r, 40));
             }
           });
         });
