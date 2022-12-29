@@ -9,6 +9,8 @@ use web_sys::{window, ReadableStreamDefaultReader, Response};
 extern crate console_error_panic_hook;
 use std::panic;
 
+mod geometry;
+
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = console)]
@@ -49,7 +51,7 @@ impl Graph {
         let spawn_height = display_height * spawn_scale;
         let spawn_width = display_width * spawn_scale;
         let node_locations = (0..node_count)
-            .map(|_| random_location(spawn_width, spawn_height))
+            .map(|_| geometry::random_location(spawn_width, spawn_height))
             .collect();
         Graph {
             node_targets,
@@ -70,7 +72,7 @@ impl Graph {
         self.node_locations.get(node_id).unwrap().as_ptr()
     }
 
-    pub fn node_ids_to_render(&self, rect: Rect) -> Vec<usize> {
+    pub fn node_ids_to_render(&self, rect: geometry::Rect) -> Vec<usize> {
         let perf = window().unwrap().performance().unwrap();
         let start = perf.now();
 
@@ -152,36 +154,5 @@ impl Graph {
         }
 
         Ok(())
-    }
-}
-
-fn random_location(scale_x: f64, scale_y: f64) -> Vec<f64> {
-    let x_loc = js_sys::Math::random() * scale_x;
-    let y_loc = js_sys::Math::random() * scale_y;
-    vec![x_loc, y_loc]
-}
-
-#[wasm_bindgen]
-pub struct Rect {
-    bottom_left: Vec<f64>,
-    top_right: Vec<f64>,
-}
-
-#[wasm_bindgen]
-impl Rect {
-    pub fn new(bottom_left: Vec<f64>, top_right: Vec<f64>) -> Rect {
-        Rect {
-            bottom_left,
-            top_right,
-        }
-    }
-}
-
-impl Rect {
-    fn contains(&self, point: &Vec<f64>) -> bool {
-        point[0] > self.bottom_left[0]
-            && point[0] < self.top_right[0]
-            && point[1] > self.bottom_left[1]
-            && point[1] < self.top_right[1]
     }
 }
