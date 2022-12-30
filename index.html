@@ -163,7 +163,7 @@
               gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
               console.log(nodePositions);
 
-              // How does gl unpack positionBuffer?
+              // How does GL unpack positionBuffer?
               let size = 2;
               let type = gl.FLOAT;
               let normalize = false;
@@ -172,7 +172,7 @@
               gl.vertexAttribPointer(positionAttrLoc, size, type,
                                      normalize, stride, unpackOffset);
 
-              // How goes gl draw?
+              // What does GL draw?
               let primitiveType = gl.TRIANGLES;
               let drawOffset = 0;
               let count = nodeCount;
