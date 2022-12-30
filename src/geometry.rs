@@ -1,20 +1,20 @@
 use wasm_bindgen::prelude::*;
 
-pub fn random_location(scale_x: f64, scale_y: f64) -> Vec<f64> {
-    let x_loc = js_sys::Math::random() * scale_x;
-    let y_loc = js_sys::Math::random() * scale_y;
+pub fn random_location(scale_x: f32, scale_y: f32) -> Vec<f32> {
+    let x_loc = js_sys::Math::random() as f32 * scale_x;
+    let y_loc = js_sys::Math::random() as f32 * scale_y;
     vec![x_loc, y_loc]
 }
 
 #[wasm_bindgen]
 pub struct Rect {
-    bottom_left: Vec<f64>,
-    top_right: Vec<f64>,
+    bottom_left: Vec<f32>,
+    top_right: Vec<f32>,
 }
 
 #[wasm_bindgen]
 impl Rect {
-    pub fn new(bottom_left: Vec<f64>, top_right: Vec<f64>) -> Rect {
+    pub fn new(bottom_left: Vec<f32>, top_right: Vec<f32>) -> Rect {
         Rect {
             bottom_left,
             top_right,
@@ -23,7 +23,7 @@ impl Rect {
 }
 
 impl Rect {
-    pub fn contains(&self, point: &Vec<f64>) -> bool {
+    pub fn contains(&self, point: &Vec<f32>) -> bool {
         point[0] > self.bottom_left[0]
             && point[0] < self.top_right[0]
             && point[1] > self.bottom_left[1]

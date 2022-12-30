@@ -30,55 +30,48 @@ pub fn get_memory() -> JsValue {
 }
 
 #[wasm_bindgen]
-pub struct Graph {
+pub struct GraphDisplay {
     node_targets: Vec<Vec<usize>>,
     node_sources: Vec<Vec<usize>>,
-    node_locations: Vec<Vec<f64>>,
+    node_locations: Vec<Vec<f32>>,
+    node_clip_space_positions: Vec<f32>,
     loading_node_index: usize,
 }
 
 #[wasm_bindgen]
-impl Graph {
+impl GraphDisplay {
     pub fn new(
         node_count: usize,
-        display_width: f64,
-        display_height: f64,
-        spawn_scale: f64,
-    ) -> Graph {
+        display_width: f32,
+        display_height: f32,
+        spawn_scale: f32,
+    ) -> GraphDisplay {
         let node_targets = (0..node_count).map(|_| Vec::new()).collect();
         let node_sources = (0..node_count).map(|_| Vec::new()).collect();
         let spawn_height = display_height * spawn_scale;
         let spawn_width = display_width * spawn_scale;
-        let node_locations = (0..node_count)
+        let node_locations: Vec<Vec<f32>> = (0..node_count)
             .map(|_| geometry::random_location(spawn_width, spawn_height))
             .collect();
-        Graph {
+        // TODO: app func that converts from global space to clip space
+        let node_clip_space_positions = node_locations.clone().into_iter().flatten().collect();
+        GraphDisplay {
             node_targets,
             node_sources,
             node_locations,
+            node_clip_space_positions,
             loading_node_index: 0,
         }
     }
 
-    pub fn node_targets_count(&self, node_id: usize) -> usize {
-        self.node_targets.get(node_id).unwrap().len()
-    }
-
-    pub fn node_targets_ptr(&self, node_id: usize) -> *const usize {
-        self.node_targets.get(node_id).unwrap().as_ptr()
-    }
-
-    pub fn node_location_ptr(&self, node_id: usize) -> *const f64 {
-        self.node_locations.get(node_id).unwrap().as_ptr()
+    pub fn clip_space_node_locations_ptr(&self) -> *const f32 {
+        self.node_clip_space_positions.as_ptr()
     }
 
     pub async fn load_edges(&mut self, chunk_array: Uint8Array) {
         let chunk_buffer = chunk_array.to_vec();
-        console_log!("Converted the stream data to a u8 vector!");
         let mut numbers = vec![0; chunk_buffer.len() / 2];
-        console_log!("Instantiated a new u16 vector!");
         LittleEndian::read_u16_into(&chunk_buffer, &mut numbers);
-        console_log!("Filled u16 vector from the buffer!");
         console_log!("Getting targets for node {}...", self.loading_node_index);
         for &num in numbers.iter() {
             // The MAX acts as a delimiter
