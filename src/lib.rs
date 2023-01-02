@@ -34,7 +34,7 @@ pub struct GraphDisplay {
     node_targets: Vec<Vec<usize>>,
     node_sources: Vec<Vec<usize>>,
     node_locations: Vec<Vec<f32>>,
-    node_clip_space_positions: Vec<f32>,
+    node_clip_space_vertices: Vec<f32>,
     loading_node_index: usize,
 }
 
@@ -45,27 +45,36 @@ impl GraphDisplay {
         display_width: f32,
         display_height: f32,
         spawn_scale: f32,
+        display_scale: f32,
     ) -> GraphDisplay {
-        let node_targets = (0..node_count).map(|_| Vec::new()).collect();
-        let node_sources = (0..node_count).map(|_| Vec::new()).collect();
+        let aspect_ratio = display_width / display_height;
         let spawn_height = display_height * spawn_scale;
         let spawn_width = display_width * spawn_scale;
+        // TODO: derive display offset from focussed node
+        let display_offset = vec![0.0, 0.0];
         let node_locations: Vec<Vec<f32>> = (0..node_count)
             .map(|_| geometry::random_location(spawn_width, spawn_height))
             .collect();
-        // TODO: app func that converts from global space to clip space
-        let node_clip_space_positions = node_locations.clone().into_iter().flatten().collect();
+        let node_clip_space_vertices = node_locations
+            .iter()
+            .map(|loc| {
+                geometry::layout_to_display(&loc, &display_offset, &display_scale, &aspect_ratio)
+            })
+            .flatten()
+            .collect();
+        let node_targets = (0..node_count).map(|_| Vec::new()).collect();
+        let node_sources = (0..node_count).map(|_| Vec::new()).collect();
         GraphDisplay {
             node_targets,
             node_sources,
             node_locations,
-            node_clip_space_positions,
+            node_clip_space_vertices,
             loading_node_index: 0,
         }
     }
 
-    pub fn clip_space_node_locations_ptr(&self) -> *const f32 {
-        self.node_clip_space_positions.as_ptr()
+    pub fn get_node_clip_space_vertices_ptr(&self) -> *const f32 {
+        self.node_clip_space_vertices.as_ptr()
     }
 
     pub async fn load_edges(&mut self, chunk_array: Uint8Array) {

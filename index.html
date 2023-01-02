@@ -136,11 +136,7 @@
         const positionAttrLoc = gl.getAttribLocation(program, "a_position");
         const positionBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-        const positionsPtr = graph.clip_space_node_locations_ptr();
-
-
-        const nodePositions = new Float32Array(wasmMemory.buffer, positionsPtr, nodeCount * 2);
-        gl.bufferData(gl.ARRAY_BUFFER, nodePositions, gl.STATIC_DRAW);
+        const nodeVerticesPtr = graph.get_node_clip_space_vertices_ptr();
 
         fetch("./targets.bin")
           .then(async response => {
@@ -152,8 +148,12 @@
                 graph.load_edges(value);
               }
 
-              const renderRect = Rect.new([0,0], [window.innerWidth, window.innerHeight]);
-              //const renderIds = graph.node_ids_to_render(renderRect);
+              const nodeVertices = new Float32Array(wasmMemory.buffer,
+                                                    nodeVerticesPtr,
+                                                    nodeCount * 2);
+              gl.bufferData(gl.ARRAY_BUFFER, nodeVertices, gl.STATIC_DRAW);
+
+              const renderRect = Rect.new([0,0], [canvas.width, canvas.height]);
               gl.viewport(0, 0, canvas.width, canvas.height);
               gl.clearColor(0, 0, 0, 0);
               gl.clear(gl.COLOR_BUFFER_BIT);
@@ -161,9 +161,8 @@
               gl.useProgram(program);
               gl.enableVertexAttribArray(positionAttrLoc);
               gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-              console.log(nodePositions);
 
-              // How does GL unpack positionBuffer?
+              // Tell GL how to unpack positionBuffer?
               let size = 2;
               let type = gl.FLOAT;
               let normalize = false;
@@ -172,12 +171,11 @@
               gl.vertexAttribPointer(positionAttrLoc, size, type,
                                      normalize, stride, unpackOffset);
 
-              // What does GL draw?
+              // Tell GL what to draw with positionBuffer
               let primitiveType = gl.TRIANGLES;
               let drawOffset = 0;
               let count = nodeCount;
               gl.drawArrays(primitiveType, drawOffset, count);
-              break
               await new Promise(r => setTimeout(r, 40));
             }
           });
