@@ -1,6 +1,7 @@
 use byteorder::{ByteOrder, LittleEndian};
 
 use js_sys::Uint8Array;
+use log::{debug, Level};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsValue;
 use web_sys::window;
@@ -10,18 +11,9 @@ use std::panic;
 mod geometry;
 
 #[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = console)]
-    fn log(s: &str);
-}
-
-macro_rules! console_log {
-    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-}
-
-#[wasm_bindgen]
-pub fn init_panic_hook() {
+pub fn init_logging() {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
+    console_log::init_with_level(Level::Debug).expect("Console logging failed to initialise");
 }
 
 #[wasm_bindgen]
@@ -34,7 +26,7 @@ pub struct GraphDisplay {
     node_targets: Vec<Vec<usize>>,
     node_sources: Vec<Vec<usize>>,
     node_locations: Vec<Vec<f32>>,
-    node_clip_space_vertices: Vec<f32>,
+    node_display_vertices: Vec<f32>,
     loading_node_index: usize,
 }
 
@@ -52,14 +44,16 @@ impl GraphDisplay {
         let spawn_width = display_width * spawn_scale;
         // TODO: derive display offset from focussed node
         let display_offset = vec![0.0, 0.0];
+        let square_edge_offset = 4.0 / display_height;
         let node_locations: Vec<Vec<f32>> = (0..node_count)
             .map(|_| geometry::random_location(spawn_width, spawn_height))
             .collect();
-        let node_clip_space_vertices = node_locations
+        let node_display_vertices = node_locations
             .iter()
             .map(|loc| {
                 geometry::layout_to_display(&loc, &display_offset, &display_scale, &aspect_ratio)
             })
+            .map(|loc| geometry::square_vertices(&loc, &aspect_ratio, &square_edge_offset))
             .flatten()
             .collect();
         let node_targets = (0..node_count).map(|_| Vec::new()).collect();
@@ -68,20 +62,20 @@ impl GraphDisplay {
             node_targets,
             node_sources,
             node_locations,
-            node_clip_space_vertices,
+            node_display_vertices,
             loading_node_index: 0,
         }
     }
 
-    pub fn get_node_clip_space_vertices_ptr(&self) -> *const f32 {
-        self.node_clip_space_vertices.as_ptr()
+    pub fn get_node_display_vertices_ptr(&self) -> *const f32 {
+        self.node_display_vertices.as_ptr()
     }
 
     pub async fn load_edges(&mut self, chunk_array: Uint8Array) {
         let chunk_buffer = chunk_array.to_vec();
         let mut numbers = vec![0; chunk_buffer.len() / 2];
         LittleEndian::read_u16_into(&chunk_buffer, &mut numbers);
-        console_log!("Getting targets for node {}...", self.loading_node_index);
+        debug!("Getting targets for node {}...", self.loading_node_index);
         for &num in numbers.iter() {
             // The MAX acts as a delimiter
             if num == u16::MAX {
@@ -120,7 +114,7 @@ impl GraphDisplay {
         let result = indices.into_iter().collect::<Vec<usize>>();
 
         let elapsed = perf.now() - start;
-        console_log!("node_ids_to_render took {} ms", elapsed);
+        debug!("node_ids_to_render took {} ms", elapsed);
 
         result
     }

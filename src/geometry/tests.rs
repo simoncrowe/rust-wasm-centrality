@@ -4,7 +4,7 @@ use super::*;
 fn test_layout_to_display_square_from_origin() {
     let layout_location = vec![2.0, 3.5];
     let display_offset = vec![0.0, 0.0];
-    let display_scale = 4.0;
+    let display_scale = 0.25;
     let aspect_ratio = 1.0;
 
     let resulting_location = layout_to_display(
@@ -14,7 +14,57 @@ fn test_layout_to_display_square_from_origin() {
         &aspect_ratio,
     );
 
-    assert_eq!(resulting_location, vec![8.0, 14.0])
+    assert_eq!(resulting_location, vec![0.5, 0.875])
+}
+
+#[test]
+fn test_layout_to_display_square_with_offset() {
+    let layout_location = vec![10.0, 8.0];
+    let display_offset = vec![7.0, 5.5];
+    let display_scale = 0.5;
+    let aspect_ratio = 1.0;
+
+    let resulting_location = layout_to_display(
+        &layout_location,
+        &display_offset,
+        &display_scale,
+        &aspect_ratio,
+    );
+
+    assert_eq!(resulting_location, vec![1.5, 1.25])
+}
+
+#[test]
+fn test_layout_to_display_square_with_offset_and_aspect_ratio() {
+    let layout_location = vec![3.0, 4.0];
+    let display_offset = vec![3.5, 4.5];
+    let display_scale = 1.0;
+    let aspect_ratio = 1.6;
+
+    let resulting_location = layout_to_display(
+        &layout_location,
+        &display_offset,
+        &display_scale,
+        &aspect_ratio,
+    );
+
+    assert_eq!(resulting_location, vec![-0.3125, -0.5])
+}
+
+#[test]
+fn test_square_vertices() {
+    let location = vec![-0.5, 0.2];
+    let edge_offset = 0.01;
+    let aspect_ratio = 2.0;
+
+    let resulting_vertices = square_vertices(&location, &aspect_ratio, &edge_offset);
+
+    let expected_vertices = vec![
+        -0.505, 0.21000001, -0.495, 0.21000001, -0.495, 0.19, -0.495, 0.19, -0.505, 0.19, -0.505,
+        0.21000001,
+    ];
+
+    assert_eq!(resulting_vertices, expected_vertices);
 }
 
 #[test]

@@ -99,16 +99,17 @@
         gl.deleteProgram(program);
       }
 
-      import init, { init_panic_hook, get_memory, Rect, GraphDisplay } from "./pkg/rust_wasm_centrality.js";
+      import init, { init_logging, get_memory, Rect, GraphDisplay } from "./pkg/rust_wasm_centrality.js";
 
       init().then(async () => {
-        init_panic_hook();
+        init_logging();
         const wasmMemory = get_memory();
         const spawnRectScale = 0.01;
         const nodeCount = 20039;
+        const displayScale = 1.0;
         const graph = GraphDisplay.new(nodeCount,
                                        window.innerWidth, window.innerHeight,
-                                       spawnRectScale);
+                                       spawnRectScale, displayScale);
         const canvas = document.getElementById("graph-canvas");
         const gl = canvas.getContext("webgl");
         if (!gl) {
@@ -136,7 +137,7 @@
         const positionAttrLoc = gl.getAttribLocation(program, "a_position");
         const positionBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-        const nodeVerticesPtr = graph.get_node_clip_space_vertices_ptr();
+        const nodeVerticesPtr = graph.get_node_display_vertices_ptr();
 
         fetch("./targets.bin")
           .then(async response => {
@@ -150,7 +151,7 @@
 
               const nodeVertices = new Float32Array(wasmMemory.buffer,
                                                     nodeVerticesPtr,
-                                                    nodeCount * 2);
+                                                    nodeCount * 12);
               gl.bufferData(gl.ARRAY_BUFFER, nodeVertices, gl.STATIC_DRAW);
 
               const renderRect = Rect.new([0,0], [canvas.width, canvas.height]);
