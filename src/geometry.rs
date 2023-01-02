@@ -12,7 +12,9 @@ pub fn layout_to_display(
     display_scale: &f32,
     aspect_ratio: &f32,
 ) -> Vec<f32> {
-    vec![0.0, 0.0]
+    let x = layout_location[0];
+    let y = layout_location[1];
+    vec![x * display_scale, y * display_scale]
 }
 
 #[wasm_bindgen]
