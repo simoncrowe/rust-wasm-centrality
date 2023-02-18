@@ -156,6 +156,8 @@
             const respReader = response.body.getReader();
             while(true) {
               webglUtils.resizeCanvasToDisplaySize(gl.canvas);
+              graph.update_display_size(window.innerWidth, window.innerHeight);
+
               const {done, value} = await respReader.read();
               if (!done) {
                 graph.load_edges(value);

@@ -83,6 +83,11 @@ impl GraphDisplay {
         self.display_offset[1] += y * pan_rate
     }
 
+    pub fn update_display_size(&mut self, display_width: f32, display_height: f32) {
+        self.display_width = display_width;
+        self.display_height = display_height;
+    }
+
     pub fn update_node_vertices(&mut self) {
         let aspect_ratio = self.display_aspect_ratio();
         self.node_display_vertices = self
