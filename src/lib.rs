@@ -27,6 +27,7 @@ pub struct GraphDisplay {
     node_sources: Vec<Vec<usize>>,
     node_locations: Vec<Vec<f32>>,
     node_display_vertices: Vec<f32>,
+    display_offset: Vec<f32>,
     loading_node_index: usize,
 }
 
@@ -42,12 +43,12 @@ impl GraphDisplay {
         let aspect_ratio = display_width / display_height;
         let spawn_height = display_height * spawn_scale;
         let spawn_width = display_width * spawn_scale;
-        // TODO: derive display offset from focussed node
-        let display_offset = vec![0.0, 0.0];
         let square_edge_offset = 4.0 / display_height;
         let node_locations: Vec<Vec<f32>> = (0..node_count)
             .map(|_| geometry::random_location(spawn_width, spawn_height))
             .collect();
+        let display_offset = node_locations[0].clone();
+        debug!("Display offset {:?}", display_offset);
         let node_display_vertices = node_locations
             .iter()
             .map(|loc| {
@@ -63,6 +64,7 @@ impl GraphDisplay {
             node_sources,
             node_locations,
             node_display_vertices,
+            display_offset,
             loading_node_index: 0,
         }
     }
