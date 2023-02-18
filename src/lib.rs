@@ -27,7 +27,11 @@ pub struct GraphDisplay {
     node_sources: Vec<Vec<usize>>,
     node_locations: Vec<Vec<f32>>,
     node_display_vertices: Vec<f32>,
+    display_width: f32,
+    display_height: f32,
+    display_scale: f32,
     display_offset: Vec<f32>,
+    square_edge_offset: f32,
     loading_node_index: usize,
 }
 
@@ -43,12 +47,12 @@ impl GraphDisplay {
         let aspect_ratio = display_width / display_height;
         let spawn_height = display_height * spawn_scale;
         let spawn_width = display_width * spawn_scale;
-        let square_edge_offset = 4.0 / display_height;
         let node_locations: Vec<Vec<f32>> = (0..node_count)
             .map(|_| geometry::random_location(spawn_width, spawn_height))
             .collect();
         let display_offset = node_locations[0].clone();
         debug!("Display offset {:?}", display_offset);
+        let square_edge_offset = 4.0 / display_height;
         let node_display_vertices = node_locations
             .iter()
             .map(|loc| {
@@ -64,9 +68,37 @@ impl GraphDisplay {
             node_sources,
             node_locations,
             node_display_vertices,
+            display_width,
+            display_height,
+            display_scale,
             display_offset,
+            square_edge_offset,
             loading_node_index: 0,
         }
+    }
+
+    pub fn translate_offset_display_space(&mut self, x: f32, y: f32) {
+        let pan_rate = 1.0 / self.display_height;
+        self.display_offset[0] -= (x * pan_rate) / self.display_aspect_ratio();
+        self.display_offset[1] += y * pan_rate
+    }
+
+    pub fn update_node_vertices(&mut self) {
+        let aspect_ratio = self.display_aspect_ratio();
+        self.node_display_vertices = self
+            .node_locations
+            .iter()
+            .map(|loc| {
+                geometry::layout_to_display(
+                    &loc,
+                    &self.display_offset,
+                    &self.display_scale,
+                    &aspect_ratio,
+                )
+            })
+            .map(|loc| geometry::square_vertices(&loc, &aspect_ratio, &self.square_edge_offset))
+            .flatten()
+            .collect();
     }
 
     pub fn get_node_display_vertices_ptr(&self) -> *const f32 {
@@ -119,5 +151,11 @@ impl GraphDisplay {
         debug!("node_ids_to_render took {} ms", elapsed);
 
         result
+    }
+}
+
+impl GraphDisplay {
+    fn display_aspect_ratio(&self) -> f32 {
+        self.display_width / self.display_height
     }
 }

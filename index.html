@@ -111,6 +111,19 @@
                                        window.innerWidth, window.innerHeight,
                                        spawnRectScale, displayScale);
         const canvas = document.getElementById("graph-canvas");
+
+        let dragging = false;
+        canvas.addEventListener("mousedown", e => {dragging = true;});
+        const stopDragging = e => {dragging = false};
+        canvas.addEventListener("mouseup", stopDragging);
+        canvas.addEventListener("mouseleave", stopDragging);
+        canvas.addEventListener("mousemove", e => {
+          if (dragging) {
+            console.log(graph);
+            graph.translate_offset_display_space(e.movementX, e.movementY);
+          };
+        });
+
         const gl = canvas.getContext("webgl");
         if (!gl) {
           alert("Unable to render graph; your browser does not support WebGL.");
@@ -137,7 +150,6 @@
         const positionAttrLoc = gl.getAttribLocation(program, "a_position");
         const positionBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-        const nodeVerticesPtr = graph.get_node_display_vertices_ptr();
 
         fetch("./targets.bin")
           .then(async response => {
@@ -149,6 +161,8 @@
                 graph.load_edges(value);
               }
 
+              graph.update_node_vertices();
+              const nodeVerticesPtr = graph.get_node_display_vertices_ptr();
               const nodeVertices = new Float32Array(wasmMemory.buffer,
                                                     nodeVerticesPtr,
                                                     nodeCount * 12);
