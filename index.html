@@ -99,17 +99,18 @@
         gl.deleteProgram(program);
       }
 
-      import init, { init_logging, get_memory, Rect, GraphDisplay } from "./pkg/rust_wasm_centrality.js";
+      import init, { init_logging, get_memory, Rect, GraphFacade } from "./pkg/rust_wasm_centrality.js";
 
       init().then(async () => {
         init_logging();
         const wasmMemory = get_memory();
-        const spawnRectScale = 0.01;
+        const spawnRectScale = 10;
         const nodeCount = 20039;
         const displayScale = 1.0;
-        const graph = GraphDisplay.new(nodeCount,
-                                       window.innerWidth, window.innerHeight,
-                                       spawnRectScale, displayScale);
+        const graph = GraphFacade.new(nodeCount, spawnRectScale,
+                                      window.innerWidth, window.innerHeight,
+                                      displayScale);
+        console.log(graph);
         const canvas = document.getElementById("graph-canvas");
 
         let dragging = false;
@@ -119,8 +120,7 @@
         canvas.addEventListener("mouseleave", stopDragging);
         canvas.addEventListener("mousemove", e => {
           if (dragging) {
-            console.log(graph);
-            graph.translate_offset_display_space(e.movementX, e.movementY);
+            graph.translate_offset_by_pixels(e.movementX, e.movementY);
           };
         });
 
@@ -160,11 +160,14 @@
 
               const {done, value} = await respReader.read();
               if (!done) {
+                console.log("loading edges...")
+                console.log(graph);
                 graph.load_edges(value);
+                console.log("Done loading edges!")
               }
 
-              graph.update_node_vertices();
-              const nodeVerticesPtr = graph.get_node_display_vertices_ptr();
+              graph.update_vertices();
+              const nodeVerticesPtr = graph.get_vertices_ptr();
               const nodeVertices = new Float32Array(wasmMemory.buffer,
                                                     nodeVerticesPtr,
                                                     nodeCount * 12);
