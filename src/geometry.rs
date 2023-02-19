@@ -54,6 +54,24 @@ pub fn square_vertices(location: &Vec<f32>, aspect_ratio: &f32, edge_offset: &f3
     flat_vertices
 }
 
+pub fn edges_vertices(
+    source_id: usize,
+    target_ids: &Vec<usize>,
+    node_locations: &Vec<Vec<f32>>,
+) -> Vec<f32> {
+    let mut vertices: Vec<f32> = vec![0.0; target_ids.len() * 4];
+    let source_location = node_locations[source_id].clone();
+    for (idx, target_id) in target_ids.iter().enumerate() {
+        let target_location = node_locations[*target_id].clone();
+        let edge_idx = idx * 4;
+        vertices[edge_idx] = source_location[0];
+        vertices[edge_idx + 1] = source_location[1];
+        vertices[edge_idx + 2] = target_location[0];
+        vertices[edge_idx + 3] = target_location[1];
+    }
+    vertices
+}
+
 #[wasm_bindgen]
 pub struct Rect {
     bottom_left: Vec<f32>,

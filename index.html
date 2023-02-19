@@ -106,13 +106,12 @@
         const wasmMemory = get_memory();
         const spawnRectScale = 10;
         const nodeCount = 20039;
-        const displayScale = 1.0;
+        const displayScale = 175.0;
         const graph = GraphFacade.new(nodeCount, spawnRectScale,
                                       window.innerWidth, window.innerHeight,
                                       displayScale);
-        console.log(graph);
-        const canvas = document.getElementById("graph-canvas");
 
+        const canvas = document.getElementById("graph-canvas");
         let dragging = false;
         canvas.addEventListener("mousedown", e => {dragging = true;});
         const stopDragging = e => {dragging = false};
@@ -150,7 +149,6 @@
         const positionAttrLoc = gl.getAttribLocation(program, "a_position");
         const positionBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-
         fetch("./targets.bin")
           .then(async response => {
             const respReader = response.body.getReader();
@@ -160,18 +158,18 @@
 
               const {done, value} = await respReader.read();
               if (!done) {
-                console.log("loading edges...")
-                console.log(graph);
                 graph.load_edges(value);
-                console.log("Done loading edges!")
               }
 
-              graph.update_vertices();
-              const nodeVerticesPtr = graph.get_vertices_ptr();
-              const nodeVertices = new Float32Array(wasmMemory.buffer,
-                                                    nodeVerticesPtr,
-                                                    nodeCount * 12);
-              gl.bufferData(gl.ARRAY_BUFFER, nodeVertices, gl.STATIC_DRAW);
+              graph.update_clipspace_geometry();
+
+              const verticesPtr = graph.get_vertices_ptr();
+              const edgeCount = graph.get_edges_count();
+              const floatCount = (nodeCount * 12) + (edgeCount * 4);
+              const vertices = new Float32Array(wasmMemory.buffer,
+                                                verticesPtr,
+                                                floatCount);
+              gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
 
               const renderRect = Rect.new([0,0], [canvas.width, canvas.height]);
               gl.viewport(0, 0, canvas.width, canvas.height);
@@ -182,7 +180,7 @@
               gl.enableVertexAttribArray(positionAttrLoc);
               gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
-              // Tell GL how to unpack positionBuffer?
+              // Tell GL how to unpack positionBuffer for node squares
               let size = 2;
               let type = gl.FLOAT;
               let normalize = false;
@@ -191,12 +189,17 @@
               gl.vertexAttribPointer(positionAttrLoc, size, type,
                                      normalize, stride, unpackOffset);
 
-              // Tell GL what to draw with positionBuffer
-              let primitiveType = gl.TRIANGLES;
-              let drawOffset = 0;
-              let count = nodeCount;
-              gl.drawArrays(primitiveType, drawOffset, count);
-              await new Promise(r => setTimeout(r, 40));
+              // Tell GL to draw node squares from positionBuffer
+              let squaresOffset = 0;
+              let triCount = nodeCount * 6;
+              gl.drawArrays(gl.TRIANGLES, squaresOffset, triCount);
+
+              // Tell GL to draw edge lines from positionBuffer
+              let linesOffset = nodeCount * 6;
+              let linesCount = edgeCount * 2;
+              gl.drawArrays(gl.LINE_LOOP, linesOffset, linesCount);
+
+              await new Promise(r => setTimeout(r, 1));
             }
           });
         });

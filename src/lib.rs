@@ -52,8 +52,8 @@ impl GraphFacade {
             .update_display_size(display_width, display_height);
     }
 
-    pub fn update_vertices(&mut self) {
-        self.graph.update_vertices();
+    pub fn update_clipspace_geometry(&mut self) {
+        self.graph.update_clipspace_geometry();
     }
 
     pub fn get_vertices_ptr(&self) -> *const f32 {
@@ -62,6 +62,10 @@ impl GraphFacade {
 
     pub fn translate_offset_by_pixels(&mut self, x: f32, y: f32) {
         self.graph.translate_offset_by_pixels(x, y);
+    }
+
+    pub fn get_edges_count(&self) -> usize {
+        self.graph.get_edges_count()
     }
 }
 
@@ -131,15 +135,25 @@ impl GraphDisplay {
         let aspect_ratio = display_width / display_height;
         let display_offset = layout.node_locations[0].clone();
         let clipspace_square_offset = NODE_DISPLAY_SQUARE_WIDTH / 2.0 / display_height;
-        let clipspace_vertices = layout
+        let clipspace_node_locations: Vec<Vec<f32>> = layout
             .node_locations
             .iter()
             .map(|loc| {
                 geometry::layout_to_display(&loc, &display_offset, &display_scale, &aspect_ratio)
             })
+            .collect();
+        let mut clipspace_vertices: Vec<f32> = clipspace_node_locations
+            .iter()
             .map(|loc| geometry::square_vertices(&loc, &aspect_ratio, &clipspace_square_offset))
             .flatten()
             .collect();
+        let clipspace_edge_vertices = layout
+            .node_targets
+            .iter()
+            .enumerate()
+            .map(|(idx, targets)| geometry::edges_vertices(idx, targets, &clipspace_node_locations))
+            .flatten();
+        clipspace_vertices.extend(clipspace_edge_vertices);
         GraphDisplay {
             layout,
             display_width,
@@ -162,9 +176,9 @@ impl GraphDisplay {
         self.display_height = display_height;
     }
 
-    pub fn update_vertices(&mut self) {
+    pub fn update_clipspace_geometry(&mut self) {
         let aspect_ratio = self.display_aspect_ratio();
-        self.clipspace_vertices = self
+        let clipspace_node_locations: Vec<Vec<f32>> = self
             .layout
             .node_locations
             .iter()
@@ -176,15 +190,35 @@ impl GraphDisplay {
                     &aspect_ratio,
                 )
             })
+            .collect();
+        let mut clipspace_vertices: Vec<f32> = clipspace_node_locations
+            .iter()
             .map(|loc| {
                 geometry::square_vertices(&loc, &aspect_ratio, &self.clipspace_square_offset)
             })
             .flatten()
             .collect();
+        let clipspace_edge_vertices = self
+            .layout
+            .node_targets
+            .iter()
+            .enumerate()
+            .map(|(idx, targets)| geometry::edges_vertices(idx, targets, &clipspace_node_locations))
+            .flatten();
+        clipspace_vertices.extend(clipspace_edge_vertices);
+        self.clipspace_vertices = clipspace_vertices;
     }
 
     pub fn get_vertices_ptr(&self) -> *const f32 {
         self.clipspace_vertices.as_ptr()
+    }
+
+    pub fn get_edges_count(&self) -> usize {
+        self.layout
+            .node_targets
+            .iter()
+            .map(|targets| targets.len())
+            .sum()
     }
 
     pub fn node_ids_to_render(&mut self, rect: geometry::Rect) -> Vec<usize> {
