@@ -13,7 +13,7 @@ pub fn random_location(scale_x: f32, scale_y: f32) -> Vec<f32> {
 /// Translates a point in graph layout space to display space
 ///
 /// (Display space is clip space in terms of the graphics library.)
-pub fn layout_to_display(
+pub fn layout_to_clipspace(
     layout_location: &Vec<f32>,
     display_offset: &Vec<f32>,
     display_scale: &f32,
@@ -22,58 +22,6 @@ pub fn layout_to_display(
     let x = ((layout_location[0] - display_offset[0]) * display_scale) / aspect_ratio;
     let y = (layout_location[1] - display_offset[1]) * display_scale;
     vec![x, y]
-}
-
-/// Get vertices for drawing a square centred on a point
-///
-/// The vertices are packed flat for the graphics library,
-/// which draws the square using two triangles in clip space.
-pub fn square_vertices(location: &Vec<f32>, aspect_ratio: &f32, edge_offset: &f32) -> Vec<f32> {
-    let mut flat_vertices = vec![0.0; NUMBERS_PER_SQUARE];
-
-    let left_x = location[0] - (edge_offset / aspect_ratio);
-    let right_x = location[0] + (edge_offset / aspect_ratio);
-    let top_y = location[1] + edge_offset;
-    let bottom_y = location[1] - edge_offset;
-
-    flat_vertices[0] = left_x;
-    flat_vertices[1] = top_y;
-
-    flat_vertices[2] = right_x;
-    flat_vertices[3] = top_y;
-
-    flat_vertices[4] = right_x;
-    flat_vertices[5] = bottom_y;
-
-    flat_vertices[6] = right_x;
-    flat_vertices[7] = bottom_y;
-
-    flat_vertices[8] = left_x;
-    flat_vertices[9] = bottom_y;
-
-    flat_vertices[10] = left_x;
-    flat_vertices[11] = top_y;
-
-    flat_vertices
-}
-
-pub fn edges_vertices(
-    source_id: usize,
-    target_ids: &Vec<usize>,
-    node_locations: &Vec<Vec<f32>>,
-) -> Vec<f32> {
-    let mut vertices: Vec<f32> = vec![0.0; target_ids.len() * NUMBERS_PER_LINE];
-    let source_location = node_locations[source_id].clone();
-    let mut edge_idx = 0;
-    for target_id in target_ids {
-        let target_location = node_locations[*target_id].clone();
-        vertices[edge_idx] = source_location[0];
-        vertices[edge_idx + 1] = source_location[1];
-        vertices[edge_idx + 2] = target_location[0];
-        vertices[edge_idx + 3] = target_location[1];
-        edge_idx += NUMBERS_PER_LINE;
-    }
-    vertices
 }
 
 // Optimised imperative code for computing clipspace vertices

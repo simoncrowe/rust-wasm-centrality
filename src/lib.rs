@@ -53,7 +53,7 @@ impl GraphFacade {
     }
 
     pub fn update_clipspace_vertices(&mut self) {
-        self.graph.update_clipspace_vertices_imp();
+        self.graph.update_clipspace_vertices();
     }
 
     pub fn get_vertices_ptr(&self) -> *const f32 {
@@ -139,21 +139,15 @@ impl GraphDisplay {
             .node_locations
             .iter()
             .map(|loc| {
-                geometry::layout_to_display(&loc, &display_offset, &display_scale, &aspect_ratio)
+                geometry::layout_to_clipspace(&loc, &display_offset, &display_scale, &aspect_ratio)
             })
             .collect();
-        let mut clipspace_vertices: Vec<f32> = clipspace_node_locations
-            .iter()
-            .map(|loc| geometry::square_vertices(&loc, &aspect_ratio, &clipspace_square_offset))
-            .flatten()
-            .collect();
-        let clipspace_edge_vertices = layout
-            .node_targets
-            .iter()
-            .enumerate()
-            .map(|(idx, targets)| geometry::edges_vertices(idx, targets, &clipspace_node_locations))
-            .flatten();
-        clipspace_vertices.extend(clipspace_edge_vertices);
+        let clipspace_vertices = geometry::build_clipspace_vertices(
+            clipspace_node_locations,
+            &layout.node_targets,
+            aspect_ratio,
+            clipspace_square_offset,
+        );
         GraphDisplay {
             layout,
             display_width,
@@ -176,7 +170,7 @@ impl GraphDisplay {
         self.display_height = display_height;
     }
 
-    pub fn update_clipspace_geometry(&mut self) {
+    pub fn update_clipspace_vertices(&mut self) {
         let perf = window().unwrap().performance().unwrap();
 
         let aspect_ratio = self.display_aspect_ratio();
@@ -187,54 +181,7 @@ impl GraphDisplay {
             .node_locations
             .iter()
             .map(|loc| {
-                geometry::layout_to_display(
-                    &loc,
-                    &self.display_offset,
-                    &self.display_scale,
-                    &aspect_ratio,
-                )
-            })
-            .collect();
-        let mut elapsed = perf.now() - start;
-        debug!("clipspace_node_locations took {} ms", elapsed);
-
-        start = perf.now();
-        let mut clipspace_vertices: Vec<f32> = clipspace_node_locations
-            .iter()
-            .map(|loc| {
-                geometry::square_vertices(&loc, &aspect_ratio, &self.clipspace_square_offset)
-            })
-            .flatten()
-            .collect();
-        elapsed = perf.now() - start;
-        debug!("clipspace(_node)_vertices took {} ms", elapsed);
-
-        start = perf.now();
-        let clipspace_edge_vertices = self
-            .layout
-            .node_targets
-            .iter()
-            .enumerate()
-            .map(|(idx, targets)| geometry::edges_vertices(idx, targets, &clipspace_node_locations))
-            .flatten();
-        clipspace_vertices.extend(clipspace_edge_vertices);
-        self.clipspace_vertices = clipspace_vertices;
-        elapsed = perf.now() - start;
-        debug!("clipspace_edge_vertices + Vec concat took {} ms", elapsed);
-    }
-
-    pub fn update_clipspace_vertices_imp(&mut self) {
-        let perf = window().unwrap().performance().unwrap();
-
-        let aspect_ratio = self.display_aspect_ratio();
-
-        let mut start = perf.now();
-        let clipspace_node_locations: Vec<Vec<f32>> = self
-            .layout
-            .node_locations
-            .iter()
-            .map(|loc| {
-                geometry::layout_to_display(
+                geometry::layout_to_clipspace(
                     &loc,
                     &self.display_offset,
                     &self.display_scale,
@@ -266,31 +213,6 @@ impl GraphDisplay {
             .iter()
             .map(|targets| targets.len())
             .sum()
-    }
-
-    pub fn node_ids_to_render(&mut self, rect: geometry::Rect) -> Vec<usize> {
-        let perf = window().unwrap().performance().unwrap();
-        let start = perf.now();
-
-        let mut indices = rustc_hash::FxHashSet::default();
-
-        for (idx, loc) in self.layout.node_locations.iter().enumerate() {
-            if rect.contains(loc) {
-                indices.insert(idx);
-                for source_idx in self.layout.node_sources.get(idx).unwrap().into_iter() {
-                    indices.insert(*source_idx);
-                }
-                for target_idx in self.layout.node_targets.get(idx).unwrap().into_iter() {
-                    indices.insert(*target_idx);
-                }
-            }
-        }
-        let result = indices.into_iter().collect::<Vec<usize>>();
-
-        let elapsed = perf.now() - start;
-        debug!("node_ids_to_render took {} ms", elapsed);
-
-        result
     }
 }
 
