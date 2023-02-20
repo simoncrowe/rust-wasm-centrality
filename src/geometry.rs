@@ -1,8 +1,9 @@
 use log::debug;
 use wasm_bindgen::prelude::*;
+use web_sys::window;
 
-const NUMBERS_PER_SQUARE: usize = 12;
-const NUMBERS_PER_LINE: usize = 4;
+pub const NUMBERS_PER_SQUARE: usize = 12;
+pub const NUMBERS_PER_LINE: usize = 4;
 
 pub fn random_location(scale_x: f32, scale_y: f32) -> Vec<f32> {
     let x_loc = js_sys::Math::random() as f32 * scale_x;
@@ -14,7 +15,7 @@ pub fn random_location(scale_x: f32, scale_y: f32) -> Vec<f32> {
 ///
 /// (Display space is clip space in terms of the graphics library.)
 pub fn layout_to_clipspace(
-    layout_location: &Vec<f32>,
+    layout_location: Vec<&f32>,
     display_offset: &Vec<f32>,
     display_scale: &f32,
     aspect_ratio: &f32,
@@ -27,17 +28,17 @@ pub fn layout_to_clipspace(
 // Optimised imperative code for computing clipspace vertices
 //
 // Returns the flattened triangles and lines for the graphics library.
-pub fn build_clipspace_vertices(
+pub fn populate_clipspace_vertices(
+    flat_vertices: &mut Vec<f32>,
     node_locations: Vec<Vec<f32>>,
     node_target_ids: &Vec<Vec<usize>>,
     aspect_ratio: f32,
     square_edge_offset: f32,
-) -> Vec<f32> {
+) {
+    let perf = window().unwrap().performance().unwrap();
     let node_count = node_locations.len();
-    let edge_count: usize = node_target_ids.iter().map(|ids| ids.len()).sum();
-    let number_count = (node_count * NUMBERS_PER_SQUARE) + (edge_count * NUMBERS_PER_LINE);
-    let mut flat_vertices: Vec<f32> = vec![0.0; number_count];
 
+    let mut start = perf.now();
     let mut node_index = 0;
     let mut square_index = 0;
     while node_index < node_count {
@@ -69,7 +70,14 @@ pub fn build_clipspace_vertices(
         square_index += NUMBERS_PER_SQUARE;
         node_index += 1;
     }
+    let mut elapsed = perf.now() - start;
+    debug!(
+        "Setting note square triangles took {} ms. ({} ms per square)",
+        elapsed,
+        elapsed / node_count as f64
+    );
 
+    start = perf.now();
     let mut source_index = 0;
     let mut line_index = node_count * NUMBERS_PER_SQUARE;
     while source_index < node_count {
@@ -77,15 +85,23 @@ pub fn build_clipspace_vertices(
         let target_indices: &Vec<usize> = &node_target_ids[source_index];
         for target_index in target_indices {
             let target_location: &Vec<f32> = &node_locations[*target_index];
+
             flat_vertices[line_index] = source_location[0];
             flat_vertices[line_index + 1] = source_location[1];
+
             flat_vertices[line_index + 2] = target_location[0];
             flat_vertices[line_index + 3] = target_location[1];
+
             line_index += NUMBERS_PER_LINE;
         }
         source_index += 1;
     }
-    flat_vertices
+    elapsed = perf.now() - start;
+    debug!(
+        "Setting note edge lines took {} ms. ({} ms per node)",
+        elapsed,
+        elapsed / node_count as f64
+    );
 }
 
 #[wasm_bindgen]
