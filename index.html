@@ -161,7 +161,7 @@
                 graph.load_edges(value);
               }
 
-              graph.update_clipspace_geometry();
+              graph.update_clipspace_vertices();
 
               const verticesPtr = graph.get_vertices_ptr();
               const edgeCount = graph.get_edges_count();
@@ -199,7 +199,7 @@
               let linesCount = edgeCount * 2;
               gl.drawArrays(gl.LINE_LOOP, linesOffset, linesCount);
 
-              await new Promise(r => setTimeout(r, 1));
+              await new Promise(r => setTimeout(r, 20));
             }
           });
         });

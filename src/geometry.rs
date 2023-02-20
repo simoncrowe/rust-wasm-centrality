@@ -1,6 +1,9 @@
 use log::debug;
 use wasm_bindgen::prelude::*;
 
+const NUMBERS_PER_SQUARE: usize = 12;
+const NUMBERS_PER_LINE: usize = 4;
+
 pub fn random_location(scale_x: f32, scale_y: f32) -> Vec<f32> {
     let x_loc = js_sys::Math::random() as f32 * scale_x;
     let y_loc = js_sys::Math::random() as f32 * scale_y;
@@ -26,7 +29,7 @@ pub fn layout_to_display(
 /// The vertices are packed flat for the graphics library,
 /// which draws the square using two triangles in clip space.
 pub fn square_vertices(location: &Vec<f32>, aspect_ratio: &f32, edge_offset: &f32) -> Vec<f32> {
-    let mut flat_vertices = vec![0.0; 12];
+    let mut flat_vertices = vec![0.0; NUMBERS_PER_SQUARE];
 
     let left_x = location[0] - (edge_offset / aspect_ratio);
     let right_x = location[0] + (edge_offset / aspect_ratio);
@@ -59,17 +62,82 @@ pub fn edges_vertices(
     target_ids: &Vec<usize>,
     node_locations: &Vec<Vec<f32>>,
 ) -> Vec<f32> {
-    let mut vertices: Vec<f32> = vec![0.0; target_ids.len() * 4];
+    let mut vertices: Vec<f32> = vec![0.0; target_ids.len() * NUMBERS_PER_LINE];
     let source_location = node_locations[source_id].clone();
-    for (idx, target_id) in target_ids.iter().enumerate() {
+    let mut edge_idx = 0;
+    for target_id in target_ids {
         let target_location = node_locations[*target_id].clone();
-        let edge_idx = idx * 4;
         vertices[edge_idx] = source_location[0];
         vertices[edge_idx + 1] = source_location[1];
         vertices[edge_idx + 2] = target_location[0];
         vertices[edge_idx + 3] = target_location[1];
+        edge_idx += NUMBERS_PER_LINE;
     }
     vertices
+}
+
+// Optimised imperative code for computing clipspace vertices
+//
+// Returns the flattened triangles and lines for the graphics library.
+pub fn build_clipspace_vertices(
+    node_locations: Vec<Vec<f32>>,
+    node_target_ids: &Vec<Vec<usize>>,
+    aspect_ratio: f32,
+    square_edge_offset: f32,
+) -> Vec<f32> {
+    let node_count = node_locations.len();
+    let edge_count: usize = node_target_ids.iter().map(|ids| ids.len()).sum();
+    let number_count = (node_count * NUMBERS_PER_SQUARE) + (edge_count * NUMBERS_PER_LINE);
+    let mut flat_vertices: Vec<f32> = vec![0.0; number_count];
+
+    let mut node_index = 0;
+    let mut square_index = 0;
+    while node_index < node_count {
+        let location: &Vec<f32> = &node_locations[node_index];
+
+        let left_x = location[0] - (square_edge_offset / aspect_ratio);
+        let right_x = location[0] + (square_edge_offset / aspect_ratio);
+        let top_y = location[1] + square_edge_offset;
+        let bottom_y = location[1] - square_edge_offset;
+
+        flat_vertices[square_index] = left_x;
+        flat_vertices[square_index + 1] = top_y;
+
+        flat_vertices[square_index + 2] = right_x;
+        flat_vertices[square_index + 3] = top_y;
+
+        flat_vertices[square_index + 4] = right_x;
+        flat_vertices[square_index + 5] = bottom_y;
+
+        flat_vertices[square_index + 6] = right_x;
+        flat_vertices[square_index + 7] = bottom_y;
+
+        flat_vertices[square_index + 8] = left_x;
+        flat_vertices[square_index + 9] = bottom_y;
+
+        flat_vertices[square_index + 10] = left_x;
+        flat_vertices[square_index + 11] = top_y;
+
+        square_index += NUMBERS_PER_SQUARE;
+        node_index += 1;
+    }
+
+    let mut source_index = 0;
+    let mut line_index = node_count * NUMBERS_PER_SQUARE;
+    while source_index < node_count {
+        let source_location: &Vec<f32> = &node_locations[source_index];
+        let target_indices: &Vec<usize> = &node_target_ids[source_index];
+        for target_index in target_indices {
+            let target_location: &Vec<f32> = &node_locations[*target_index];
+            flat_vertices[line_index] = source_location[0];
+            flat_vertices[line_index + 1] = source_location[1];
+            flat_vertices[line_index + 2] = target_location[0];
+            flat_vertices[line_index + 3] = target_location[1];
+            line_index += NUMBERS_PER_LINE;
+        }
+        source_index += 1;
+    }
+    flat_vertices
 }
 
 #[wasm_bindgen]

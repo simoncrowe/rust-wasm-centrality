@@ -52,8 +52,8 @@ impl GraphFacade {
             .update_display_size(display_width, display_height);
     }
 
-    pub fn update_clipspace_geometry(&mut self) {
-        self.graph.update_clipspace_geometry();
+    pub fn update_clipspace_vertices(&mut self) {
+        self.graph.update_clipspace_vertices_imp();
     }
 
     pub fn get_vertices_ptr(&self) -> *const f32 {
@@ -177,7 +177,11 @@ impl GraphDisplay {
     }
 
     pub fn update_clipspace_geometry(&mut self) {
+        let perf = window().unwrap().performance().unwrap();
+
         let aspect_ratio = self.display_aspect_ratio();
+
+        let mut start = perf.now();
         let clipspace_node_locations: Vec<Vec<f32>> = self
             .layout
             .node_locations
@@ -191,6 +195,10 @@ impl GraphDisplay {
                 )
             })
             .collect();
+        let mut elapsed = perf.now() - start;
+        debug!("clipspace_node_locations took {} ms", elapsed);
+
+        start = perf.now();
         let mut clipspace_vertices: Vec<f32> = clipspace_node_locations
             .iter()
             .map(|loc| {
@@ -198,6 +206,10 @@ impl GraphDisplay {
             })
             .flatten()
             .collect();
+        elapsed = perf.now() - start;
+        debug!("clipspace(_node)_vertices took {} ms", elapsed);
+
+        start = perf.now();
         let clipspace_edge_vertices = self
             .layout
             .node_targets
@@ -207,6 +219,41 @@ impl GraphDisplay {
             .flatten();
         clipspace_vertices.extend(clipspace_edge_vertices);
         self.clipspace_vertices = clipspace_vertices;
+        elapsed = perf.now() - start;
+        debug!("clipspace_edge_vertices + Vec concat took {} ms", elapsed);
+    }
+
+    pub fn update_clipspace_vertices_imp(&mut self) {
+        let perf = window().unwrap().performance().unwrap();
+
+        let aspect_ratio = self.display_aspect_ratio();
+
+        let mut start = perf.now();
+        let clipspace_node_locations: Vec<Vec<f32>> = self
+            .layout
+            .node_locations
+            .iter()
+            .map(|loc| {
+                geometry::layout_to_display(
+                    &loc,
+                    &self.display_offset,
+                    &self.display_scale,
+                    &aspect_ratio,
+                )
+            })
+            .collect();
+        let mut elapsed = perf.now() - start;
+        debug!("clipspace_node_locations took {} ms", elapsed);
+
+        start = perf.now();
+        self.clipspace_vertices = geometry::build_clipspace_vertices(
+            clipspace_node_locations,
+            &self.layout.node_targets,
+            aspect_ratio,
+            self.clipspace_square_offset,
+        );
+        elapsed = perf.now() - start;
+        debug!("build_clipspace_vertices took {} ms", elapsed);
     }
 
     pub fn get_vertices_ptr(&self) -> *const f32 {
