@@ -128,6 +128,10 @@ impl Points {
         }
     }
 
+    pub fn get_data(&self) -> Vec<f32> {
+        self.data.clone()
+    }
+
     pub fn to_clipspace(
         &self,
         display_offset: Vector2,

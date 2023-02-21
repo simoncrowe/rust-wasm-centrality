@@ -61,12 +61,16 @@ impl GraphFacade {
         self.graph.get_vertices_ptr()
     }
 
+    pub fn get_vertex_indices_ptr(&self) -> *const usize {
+        self.graph.get_vertex_indices_ptr()
+    }
+
     pub fn translate_offset_by_pixels(&mut self, x: f32, y: f32) {
         self.graph.translate_offset_by_pixels(x, y);
     }
 
-    pub fn get_edges_count(&self) -> usize {
-        self.graph.get_edges_count()
+    pub fn count_edges(&self) -> usize {
+        self.graph.count_edges()
     }
 }
 
@@ -124,7 +128,7 @@ pub struct GraphDisplay {
     display_scale: f32,
     display_offset: geometry::Vector2,
     clipspace_vertices: Vec<f32>,
-    clipspace_square_offset: f32,
+    vertex_indices: Vec<usize>,
 }
 
 impl GraphDisplay {
@@ -137,19 +141,11 @@ impl GraphDisplay {
         let aspect_ratio = display_width / display_height;
         let display_offset = layout.node_locations.get_point(0);
         let clipspace_square_offset = NODE_DISPLAY_SQUARE_WIDTH / 2.0 / display_height;
-        let clipspace_node_locations =
-            layout
-                .node_locations
-                .to_clipspace(display_offset, &display_scale, &aspect_ratio);
-        let node_squares_len = clipspace_node_locations.len() * geometry::VALUES_PER_SQUARE;
-        let mut clipspace_vertices = vec![0.0; node_squares_len];
-        geometry::populate_clipspace_vertices(
-            &mut clipspace_vertices,
-            clipspace_node_locations,
-            &layout.node_targets,
-            aspect_ratio,
-            clipspace_square_offset,
-        );
+        let clipspace_vertices = layout
+            .node_locations
+            .to_clipspace(display_offset, &display_scale, &aspect_ratio)
+            .get_data();
+        let vertex_indices: Vec<usize> = Vec::new();
         GraphDisplay {
             layout,
             display_width,
@@ -157,7 +153,7 @@ impl GraphDisplay {
             display_scale,
             display_offset,
             clipspace_vertices,
-            clipspace_square_offset,
+            vertex_indices,
         }
     }
 
@@ -175,50 +171,44 @@ impl GraphDisplay {
     }
 
     pub fn update_clipspace_vertices(&mut self) {
-        let aspect_ratio = self.display_aspect_ratio();
-
         let perf = window().unwrap().performance().unwrap();
-        let mut start = perf.now();
-        let clipspace_node_locations = self.layout.node_locations.to_clipspace(
-            self.display_offset,
-            &self.display_scale,
-            &aspect_ratio,
-        );
-        let mut elapsed = perf.now() - start;
-        debug!("clipspace_node_locations took {} ms", elapsed);
 
-        start = perf.now();
-        let node_count = clipspace_node_locations.len();
-        let edges_allocated = (self.clipspace_vertices.len()
-            - (node_count * geometry::VALUES_PER_SQUARE))
-            / geometry::VALUES_PER_LINE;
-        if edges_allocated < self.layout.edges_loaded {
-            let unallocated_edge_count = self.layout.edges_loaded - edges_allocated;
-            let new_size = self.clipspace_vertices.len()
-                + (unallocated_edge_count * geometry::VALUES_PER_LINE);
-            self.clipspace_vertices.resize(new_size, 0.0);
+        let edges_start = perf.now();
+        let edges_count = self.count_edges();
+        if edges_count > (self.vertex_indices.len() / 2) {
+            self.vertex_indices.resize(usize::MAX, edges_count * 2);
+            let mut edge_start_index = 0;
+            for (source_index, target_indices) in self.layout.node_targets.iter().enumerate() {
+                for target_index in target_indices {
+                    self.vertex_indices[edge_start_index] = source_index;
+                    self.vertex_indices[edge_start_index + 1] = *target_index;
+                    edge_start_index += 2;
+                }
+            }
         }
-        debug!("VERT ARRAY SIZE {}", self.clipspace_vertices.len());
-        elapsed = perf.now() - start;
-        debug!("Vector resize logic for edges took {} ms", elapsed);
+        let edges_elapsed = perf.now() - edges_start;
+        debug!("vertex_indices took {} ms", edges_elapsed);
 
-        start = perf.now();
-        geometry::populate_clipspace_vertices(
-            &mut self.clipspace_vertices,
-            clipspace_node_locations,
-            &self.layout.node_targets,
-            aspect_ratio,
-            self.clipspace_square_offset,
-        );
-        elapsed = perf.now() - start;
-        debug!("populate_clipspace_vertices took {} ms", elapsed);
+        let verts_start = perf.now();
+        let aspect_ratio = self.display_aspect_ratio();
+        self.clipspace_vertices = self
+            .layout
+            .node_locations
+            .to_clipspace(self.display_offset, &self.display_scale, &aspect_ratio)
+            .get_data();
+        let verts_elapsed = perf.now() - verts_start;
+        debug!("clipspace_vertices took {} ms", verts_elapsed);
     }
 
     pub fn get_vertices_ptr(&self) -> *const f32 {
         self.clipspace_vertices.as_ptr()
     }
 
-    pub fn get_edges_count(&self) -> usize {
+    pub fn get_vertex_indices_ptr(&self) -> *const usize {
+        self.vertex_indices.as_ptr()
+    }
+
+    pub fn count_edges(&self) -> usize {
         self.layout
             .node_targets
             .iter()
