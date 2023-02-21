@@ -61,7 +61,7 @@ impl GraphFacade {
         self.graph.get_vertices_ptr()
     }
 
-    pub fn get_vertex_indices_ptr(&self) -> *const usize {
+    pub fn get_vertex_indices_ptr(&self) -> *const u16 {
         self.graph.get_vertex_indices_ptr()
     }
 
@@ -128,7 +128,7 @@ pub struct GraphDisplay {
     display_scale: f32,
     display_offset: geometry::Vector2,
     clipspace_vertices: Vec<f32>,
-    vertex_indices: Vec<usize>,
+    vertex_indices: Vec<u16>,
 }
 
 impl GraphDisplay {
@@ -145,7 +145,7 @@ impl GraphDisplay {
             .node_locations
             .to_clipspace(display_offset, &display_scale, &aspect_ratio)
             .get_data();
-        let vertex_indices: Vec<usize> = Vec::new();
+        let vertex_indices: Vec<u16> = Vec::new();
         GraphDisplay {
             layout,
             display_width,
@@ -176,12 +176,14 @@ impl GraphDisplay {
         let edges_start = perf.now();
         let edges_count = self.count_edges();
         if edges_count > (self.vertex_indices.len() / 2) {
-            self.vertex_indices.resize(usize::MAX, edges_count * 2);
+            self.vertex_indices.resize(edges_count * 2, u16::MAX);
             let mut edge_start_index = 0;
             for (source_index, target_indices) in self.layout.node_targets.iter().enumerate() {
                 for target_index in target_indices {
-                    self.vertex_indices[edge_start_index] = source_index;
-                    self.vertex_indices[edge_start_index + 1] = *target_index;
+                    self.vertex_indices[edge_start_index] =
+                        u16::try_from(source_index).expect("Node index should fit u16");
+                    self.vertex_indices[edge_start_index + 1] =
+                        u16::try_from(*target_index).expect("Node index should fit u16");
                     edge_start_index += 2;
                 }
             }
@@ -204,7 +206,7 @@ impl GraphDisplay {
         self.clipspace_vertices.as_ptr()
     }
 
-    pub fn get_vertex_indices_ptr(&self) -> *const usize {
+    pub fn get_vertex_indices_ptr(&self) -> *const u16 {
         self.vertex_indices.as_ptr()
     }
 

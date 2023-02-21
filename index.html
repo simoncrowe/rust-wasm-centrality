@@ -149,6 +149,8 @@
         const positionAttrLoc = gl.getAttribLocation(program, "a_position");
         const positionBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        const indexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
         fetch("./targets.bin")
           .then(async response => {
             const respReader = response.body.getReader();
@@ -164,12 +166,16 @@
               graph.update_clipspace_vertices();
 
               const verticesPtr = graph.get_vertices_ptr();
-              const edgeCount = graph.get_edges_count();
-              const floatCount = (nodeCount * 12) + (edgeCount * 4);
               const vertices = new Float32Array(wasmMemory.buffer,
                                                 verticesPtr,
-                                                floatCount);
-              gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+                                                nodeCount * 2);
+
+              const edgeCount = graph.count_edges();
+              const vertexIndicesPtr = graph.get_vertex_indices_ptr();
+              const vertexIndices = new Int16Array(wasmMemory.buffer,
+                                                   vertexIndicesPtr,
+                                                   edgeCount * 2);
+              gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, vertexIndices, gl.STATIC_DRAW);
 
               gl.viewport(0, 0, canvas.width, canvas.height);
               gl.clearColor(0, 0, 0, 0);
@@ -179,7 +185,7 @@
               gl.enableVertexAttribArray(positionAttrLoc);
               gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
-              // Tell GL how to unpack positionBuffer for node squares
+              // Tell GL how to unpack positionBuffer
               let size = 2;
               let type = gl.FLOAT;
               let normalize = false;
@@ -188,17 +194,16 @@
               gl.vertexAttribPointer(positionAttrLoc, size, type,
                                      normalize, stride, unpackOffset);
 
-              // Tell GL to draw node squares from positionBuffer
-              let squaresOffset = 0;
-              let triCount = nodeCount * 6;
-              gl.drawArrays(gl.TRIANGLES, squaresOffset, triCount);
 
-              // Tell GL to draw edge lines from positionBuffer
-              let linesOffset = nodeCount * 6;
-              let linesCount = edgeCount * 2;
-              gl.drawArrays(gl.LINE_LOOP, linesOffset, linesCount);
+              // Load vertices into array buffer
+              gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
 
-              await new Promise(r => setTimeout(r, 20));
+              // Tell GL to draw edge lines from indices
+              let offset = 0;
+              let count = edgeCount * 2;
+              let indexType = gl.UNSIGNED_SHORT;
+              gl.drawElements(gl.LINES, count, indexType, offset);
+              await new Promise(r => setTimeout(r, 50));
             }
           });
         });
