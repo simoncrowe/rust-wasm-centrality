@@ -99,7 +99,7 @@
         gl.deleteProgram(program);
       }
 
-      import init, { init_logging, get_memory, Rect, GraphFacade } from "./pkg/rust_wasm_centrality.js";
+      import init, { init_logging, get_memory, GraphFacade } from "./pkg/rust_wasm_centrality.js";
 
       init().then(async () => {
         init_logging();
@@ -171,7 +171,6 @@
                                                 floatCount);
               gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
 
-              const renderRect = Rect.new([0,0], [canvas.width, canvas.height]);
               gl.viewport(0, 0, canvas.width, canvas.height);
               gl.clearColor(0, 0, 0, 0);
               gl.clear(gl.COLOR_BUFFER_BIT);

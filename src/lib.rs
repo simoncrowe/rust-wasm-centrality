@@ -73,7 +73,7 @@ impl GraphFacade {
 pub struct GraphLayout {
     node_targets: Vec<Vec<usize>>,
     node_sources: Vec<Vec<usize>>,
-    node_locations: Array2D<f32>,
+    node_locations: geometry::Points,
     loading_node_index: usize,
     edges_loaded: usize,
 }
@@ -82,12 +82,7 @@ impl GraphLayout {
     pub fn new(node_count: usize, spawn_scale: f32) -> GraphLayout {
         let node_targets = (0..node_count).map(|_| Vec::new()).collect();
         let node_sources = (0..node_count).map(|_| Vec::new()).collect();
-        let mut node_locations = Array2D::filled_with(0.0, node_count, 2);
-        for node_index in 0..node_count {
-            let loc = geometry::random_location(spawn_scale, spawn_scale);
-            node_locations[(node_index, 0)] = loc[0];
-            node_locations[(node_index, 1)] = loc[1];
-        }
+        let node_locations = geometry::Points::new_random(node_count, spawn_scale);
         GraphLayout {
             node_targets,
             node_sources,
@@ -127,7 +122,7 @@ pub struct GraphDisplay {
     display_width: f32,
     display_height: f32,
     display_scale: f32,
-    display_offset: Vec<f32>,
+    display_offset: geometry::Vector2,
     clipspace_vertices: Vec<f32>,
     clipspace_square_offset: f32,
 }
@@ -140,26 +135,13 @@ impl GraphDisplay {
         display_scale: f32,
     ) -> GraphDisplay {
         let aspect_ratio = display_width / display_height;
-        let display_offset = layout
-            .node_locations
-            .row_iter(0)
-            .expect("Location of first node should exist")
-            .map(|num_ref| *num_ref)
-            .collect();
+        let display_offset = layout.node_locations.get_point(0);
         let clipspace_square_offset = NODE_DISPLAY_SQUARE_WIDTH / 2.0 / display_height;
-        let clipspace_node_locations: Vec<Vec<f32>> = layout
-            .node_locations
-            .rows_iter()
-            .map(|loc| {
-                geometry::layout_to_clipspace(
-                    loc.collect(),
-                    &display_offset,
-                    &display_scale,
-                    &aspect_ratio,
-                )
-            })
-            .collect();
-        let node_squares_len = clipspace_node_locations.len() * geometry::NUMBERS_PER_SQUARE;
+        let clipspace_node_locations =
+            layout
+                .node_locations
+                .to_clipspace(display_offset, &display_scale, &aspect_ratio);
+        let node_squares_len = clipspace_node_locations.len() * geometry::VALUES_PER_SQUARE;
         let mut clipspace_vertices = vec![0.0; node_squares_len];
         geometry::populate_clipspace_vertices(
             &mut clipspace_vertices,
@@ -181,8 +163,10 @@ impl GraphDisplay {
 
     pub fn translate_offset_by_pixels(&mut self, x: f32, y: f32) {
         let pan_rate = DISPLAY_PAN_RATE / self.display_height;
-        self.display_offset[0] -= (x * pan_rate) / self.display_aspect_ratio();
-        self.display_offset[1] += y * pan_rate
+        let new_x = self.display_offset.x - (x * pan_rate) / self.display_aspect_ratio();
+
+        let new_y = self.display_offset.y + y * pan_rate;
+        self.display_offset = geometry::Vector2::new(new_x, new_y);
     }
 
     pub fn update_display_size(&mut self, display_width: f32, display_height: f32) {
@@ -195,33 +179,26 @@ impl GraphDisplay {
 
         let perf = window().unwrap().performance().unwrap();
         let mut start = perf.now();
-        let clipspace_node_locations: Vec<Vec<f32>> = self
-            .layout
-            .node_locations
-            .rows_iter()
-            .map(|loc| {
-                geometry::layout_to_clipspace(
-                    loc.collect(),
-                    &self.display_offset,
-                    &self.display_scale,
-                    &aspect_ratio,
-                )
-            })
-            .collect();
+        let clipspace_node_locations = self.layout.node_locations.to_clipspace(
+            self.display_offset,
+            &self.display_scale,
+            &aspect_ratio,
+        );
         let mut elapsed = perf.now() - start;
         debug!("clipspace_node_locations took {} ms", elapsed);
 
         start = perf.now();
         let node_count = clipspace_node_locations.len();
         let edges_allocated = (self.clipspace_vertices.len()
-            - (node_count * geometry::NUMBERS_PER_SQUARE))
-            / geometry::NUMBERS_PER_LINE;
+            - (node_count * geometry::VALUES_PER_SQUARE))
+            / geometry::VALUES_PER_LINE;
         if edges_allocated < self.layout.edges_loaded {
             let unallocated_edge_count = self.layout.edges_loaded - edges_allocated;
             let new_size = self.clipspace_vertices.len()
-                + (unallocated_edge_count * geometry::NUMBERS_PER_LINE);
+                + (unallocated_edge_count * geometry::VALUES_PER_LINE);
             self.clipspace_vertices.resize(new_size, 0.0);
         }
+        debug!("VERT ARRAY SIZE {}", self.clipspace_vertices.len());
         elapsed = perf.now() - start;
         debug!("Vector resize logic for edges took {} ms", elapsed);
 
@@ -234,7 +211,7 @@ impl GraphDisplay {
             self.clipspace_square_offset,
         );
         elapsed = perf.now() - start;
-        debug!("build_clipspace_vertices took {} ms", elapsed);
+        debug!("populate_clipspace_vertices took {} ms", elapsed);
     }
 
     pub fn get_vertices_ptr(&self) -> *const f32 {
