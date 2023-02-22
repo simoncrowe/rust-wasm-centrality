@@ -11,7 +11,8 @@ use std::panic;
 
 mod geometry;
 
-const DISPLAY_PAN_RATE: f32 = 0.5;
+const DISPLAY_PAN_RATE: f32 = 1.0;
+const DISPLAY_PAN_EXPONENT: f32 = 2.0;
 
 #[wasm_bindgen]
 pub fn init_logging() {
@@ -68,8 +69,8 @@ impl GraphFacade {
         self.graph.get_vertex_indices_len()
     }
 
-    pub fn translate_offset_by_pixels(&mut self, x: f32, y: f32) {
-        self.graph.translate_offset_by_pixels(x, y);
+    pub fn pan(&mut self, x: f32, y: f32) {
+        self.graph.pan(x, y);
     }
 }
 
@@ -95,7 +96,6 @@ impl GraphLayout {
         }
     }
     pub fn load_edges(&mut self, chunk_array: Uint8Array) {
-        debug!("Started loading edges");
         let chunk_buffer = chunk_array.to_vec();
         let mut numbers = vec![0; chunk_buffer.len() / 2];
         LittleEndian::read_u16_into(&chunk_buffer, &mut numbers);
@@ -155,11 +155,23 @@ impl GraphDisplay {
         }
     }
 
-    pub fn translate_offset_by_pixels(&mut self, x: f32, y: f32) {
-        let pan_rate = DISPLAY_PAN_RATE / self.display_height;
-        let new_x = self.display_offset.x - ((x * pan_rate) / self.display_aspect_ratio());
-
-        let new_y = self.display_offset.y + (y * pan_rate);
+    pub fn pan(&mut self, x: f32, y: f32) {
+        let pan_rate = (DISPLAY_PAN_RATE * 2.0) / self.display_height;
+        let mut x_subtrahend: f32;
+        if x < 0.0 {
+            x_subtrahend =
+                (-(x.powf(DISPLAY_PAN_EXPONENT) * pan_rate)) / self.display_aspect_ratio();
+        } else {
+            x_subtrahend = (x.powf(DISPLAY_PAN_EXPONENT) * pan_rate) / self.display_aspect_ratio();
+        }
+        let mut y_addend: f32;
+        if y < 0.0 {
+            y_addend = -(y.powf(DISPLAY_PAN_EXPONENT) * pan_rate);
+        } else {
+            y_addend = y.powf(DISPLAY_PAN_EXPONENT) * pan_rate;
+        }
+        let new_x = self.display_offset.x - x_subtrahend;
+        let new_y = self.display_offset.y + y_addend;
         self.display_offset = geometry::Vector2::new(new_x, new_y);
     }
 
@@ -169,9 +181,6 @@ impl GraphDisplay {
     }
 
     pub fn update_clipspace_vertices(&mut self) {
-        let perf = window().unwrap().performance().unwrap();
-
-        let edges_start = perf.now();
         let edges_count = self.count_edges();
         if edges_count > (self.vertex_indices.len() / 2) {
             self.vertex_indices.resize(edges_count * 2, u16::MAX);
@@ -186,18 +195,13 @@ impl GraphDisplay {
                 }
             }
         }
-        let edges_elapsed = perf.now() - edges_start;
-        debug!("vertex_indices took {} ms", edges_elapsed);
 
-        let verts_start = perf.now();
         let aspect_ratio = self.display_aspect_ratio();
         self.clipspace_vertices = self
             .layout
             .node_locations
             .to_clipspace(self.display_offset, &self.display_scale, &aspect_ratio)
             .get_data();
-        let verts_elapsed = perf.now() - verts_start;
-        debug!("clipspace_vertices took {} ms", verts_elapsed);
     }
 
     pub fn get_vertices_ptr(&self) -> *const f32 {

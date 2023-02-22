@@ -104,11 +104,11 @@
       init().then(async () => {
         init_logging();
         const wasmMemory = get_memory();
-        const spawnRectScale = 10;
+        const spawnSize = 1500;
         const nodeCount = 20039;
         let edgeCount = 0;
-        const displayScale = 175.0;
-        const graph = GraphFacade.new(nodeCount, spawnRectScale,
+        const displayScale = 1;
+        const graph = GraphFacade.new(nodeCount, spawnSize,
                                       window.innerWidth, window.innerHeight,
                                       displayScale);
 
@@ -120,7 +120,7 @@
         canvas.addEventListener("mouseleave", stopDragging);
         canvas.addEventListener("mousemove", e => {
           if (dragging) {
-            graph.translate_offset_by_pixels(e.movementX, e.movementY);
+            graph.pan(e.movementX, e.movementY);
           };
         });
 
