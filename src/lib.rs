@@ -11,8 +11,7 @@ use std::panic;
 
 mod geometry;
 
-const NODE_DISPLAY_SQUARE_WIDTH: f32 = 8.0;
-const DISPLAY_PAN_RATE: f32 = 1.0;
+const DISPLAY_PAN_RATE: f32 = 0.5;
 
 #[wasm_bindgen]
 pub fn init_logging() {
@@ -65,12 +64,12 @@ impl GraphFacade {
         self.graph.get_vertex_indices_ptr()
     }
 
-    pub fn translate_offset_by_pixels(&mut self, x: f32, y: f32) {
-        self.graph.translate_offset_by_pixels(x, y);
+    pub fn get_vertex_indices_len(&self) -> usize {
+        self.graph.get_vertex_indices_len()
     }
 
-    pub fn count_edges(&self) -> usize {
-        self.graph.count_edges()
+    pub fn translate_offset_by_pixels(&mut self, x: f32, y: f32) {
+        self.graph.translate_offset_by_pixels(x, y);
     }
 }
 
@@ -140,7 +139,6 @@ impl GraphDisplay {
     ) -> GraphDisplay {
         let aspect_ratio = display_width / display_height;
         let display_offset = layout.node_locations.get_point(0);
-        let clipspace_square_offset = NODE_DISPLAY_SQUARE_WIDTH / 2.0 / display_height;
         let clipspace_vertices = layout
             .node_locations
             .to_clipspace(display_offset, &display_scale, &aspect_ratio)
@@ -159,9 +157,9 @@ impl GraphDisplay {
 
     pub fn translate_offset_by_pixels(&mut self, x: f32, y: f32) {
         let pan_rate = DISPLAY_PAN_RATE / self.display_height;
-        let new_x = self.display_offset.x - (x * pan_rate) / self.display_aspect_ratio();
+        let new_x = self.display_offset.x - ((x * pan_rate) / self.display_aspect_ratio());
 
-        let new_y = self.display_offset.y + y * pan_rate;
+        let new_y = self.display_offset.y + (y * pan_rate);
         self.display_offset = geometry::Vector2::new(new_x, new_y);
     }
 
@@ -210,17 +208,21 @@ impl GraphDisplay {
         self.vertex_indices.as_ptr()
     }
 
-    pub fn count_edges(&self) -> usize {
-        self.layout
-            .node_targets
-            .iter()
-            .map(|targets| targets.len())
-            .sum()
+    pub fn get_vertex_indices_len(&self) -> usize {
+        self.vertex_indices.len()
     }
 }
 
 impl GraphDisplay {
     fn display_aspect_ratio(&self) -> f32 {
         self.display_width / self.display_height
+    }
+
+    pub fn count_edges(&self) -> usize {
+        self.layout
+            .node_targets
+            .iter()
+            .map(|targets| targets.len())
+            .sum()
     }
 }

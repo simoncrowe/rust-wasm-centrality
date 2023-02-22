@@ -25,7 +25,7 @@
         height: 75%;
         overflow-x: clip;
         overflow-y: scroll;
-        background-color: rgba(210, 210, 210, 0.6);
+        background-color: rgba(210, 210, 210, 0.75);
       }
       table {
         width: 100%;
@@ -106,6 +106,7 @@
         const wasmMemory = get_memory();
         const spawnRectScale = 10;
         const nodeCount = 20039;
+        let edgeCount = 0;
         const displayScale = 175.0;
         const graph = GraphFacade.new(nodeCount, spawnRectScale,
                                       window.innerWidth, window.innerHeight,
@@ -129,6 +130,7 @@
           // TODO: destroy any visible DOM elements that refer to the graph
           return
         }
+        webglUtils.resizeCanvasToDisplaySize(gl.canvas);
 
         const vertexSrc = `
           attribute vec2 a_position;
@@ -151,60 +153,75 @@
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
         const indexBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+
+        const renderFrame = (now) => {
+            webglUtils.resizeCanvasToDisplaySize(gl.canvas);
+            gl.viewport(0, 0, canvas.width, canvas.height);
+            gl.clearColor(0, 0, 0, 0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+
+            gl.useProgram(program);
+            gl.enableVertexAttribArray(positionAttrLoc);
+            graph.update_display_size(window.innerWidth, window.innerHeight);
+            graph.update_clipspace_vertices();
+
+            // Load vertex positions
+            const verticesPtr = graph.get_vertices_ptr();
+            const vertices = new Float32Array(wasmMemory.buffer,
+                                              verticesPtr,
+                                              nodeCount * 2);
+            gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
+            // Tell GL how to unpack positionBuffer
+            let size = 2;
+            let type = gl.FLOAT;
+            let normalize = false;
+            let stride = 0;
+            let unpackOffset = 0;
+            gl.vertexAttribPointer(positionAttrLoc, size, type,
+                                   normalize, stride, unpackOffset);
+
+
+            // Tell GL to draw edge lines from indices
+            let offset = 0;
+            let count = edgeCount * 2;
+            let indexType = gl.UNSIGNED_SHORT;
+            gl.drawElements(gl.LINES, count, indexType, offset);
+
+        };
+        const updateEdgeBuffer = () => {
+          const vertexIndicesLen = graph.get_vertex_indices_len();
+          edgeCount = vertexIndicesLen / 2;
+          const vertexIndicesPtr = graph.get_vertex_indices_ptr();
+          const vertexIndices = new Int16Array(wasmMemory.buffer,
+                                               vertexIndicesPtr,
+                                               vertexIndicesLen);
+          gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, vertexIndices, gl.STATIC_DRAW);
+        };
+        const renderFrameWithEdgeBuffer = (now) => {
+          updateEdgeBuffer();
+          renderFrame();
+        };
+        const renderLoop = (now) => {
+            renderFrame(now);
+            requestAnimationFrame(renderLoop);
+        };
         fetch("./targets.bin")
           .then(async response => {
+            // Force GL to initialise?
+
             const respReader = response.body.getReader();
             while(true) {
-              webglUtils.resizeCanvasToDisplaySize(gl.canvas);
-              graph.update_display_size(window.innerWidth, window.innerHeight);
-
               const {done, value} = await respReader.read();
               if (!done) {
                 graph.load_edges(value);
+                renderFrameWithEdgeBuffer();
               }
-
-              graph.update_clipspace_vertices();
-
-              const verticesPtr = graph.get_vertices_ptr();
-              const vertices = new Float32Array(wasmMemory.buffer,
-                                                verticesPtr,
-                                                nodeCount * 2);
-
-              const edgeCount = graph.count_edges();
-              const vertexIndicesPtr = graph.get_vertex_indices_ptr();
-              const vertexIndices = new Int16Array(wasmMemory.buffer,
-                                                   vertexIndicesPtr,
-                                                   edgeCount * 2);
-              gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, vertexIndices, gl.STATIC_DRAW);
-
-              gl.viewport(0, 0, canvas.width, canvas.height);
-              gl.clearColor(0, 0, 0, 0);
-              gl.clear(gl.COLOR_BUFFER_BIT);
-
-              gl.useProgram(program);
-              gl.enableVertexAttribArray(positionAttrLoc);
-              gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-
-              // Tell GL how to unpack positionBuffer
-              let size = 2;
-              let type = gl.FLOAT;
-              let normalize = false;
-              let stride = 0;
-              let unpackOffset = 0;
-              gl.vertexAttribPointer(positionAttrLoc, size, type,
-                                     normalize, stride, unpackOffset);
-
-
-              // Load vertices into array buffer
-              gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-
-              // Tell GL to draw edge lines from indices
-              let offset = 0;
-              let count = edgeCount * 2;
-              let indexType = gl.UNSIGNED_SHORT;
-              gl.drawElements(gl.LINES, count, indexType, offset);
-              await new Promise(r => setTimeout(r, 50));
+              else{break;}
             }
+            renderLoop();
           });
         });
     </script>
