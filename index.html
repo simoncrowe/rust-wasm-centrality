@@ -120,8 +120,16 @@
         canvas.addEventListener("mouseleave", stopDragging);
         canvas.addEventListener("mousemove", e => {
           if (dragging) {
-            graph.pan(e.movementX, e.movementY);
+            graph.pan(-e.movementX, e.movementY);
           };
+        });
+        canvas.addEventListener('wheel', (e) => {
+          if (e.deltaY < 0) {
+            graph.zoom_in();
+          }
+          else {
+            graph.zoom_out();
+          }
         });
 
         const gl = canvas.getContext("webgl");

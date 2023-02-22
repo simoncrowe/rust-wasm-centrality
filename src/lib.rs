@@ -13,6 +13,7 @@ mod geometry;
 
 const DISPLAY_PAN_RATE: f32 = 1.0;
 const DISPLAY_PAN_EXPONENT: f32 = 2.0;
+const DISPLAY_ZOOM_RATE: f32 = 1.25;
 
 #[wasm_bindgen]
 pub fn init_logging() {
@@ -71,6 +72,14 @@ impl GraphFacade {
 
     pub fn pan(&mut self, x: f32, y: f32) {
         self.graph.pan(x, y);
+    }
+
+    pub fn zoom_in(&mut self) {
+        self.graph.zoom_in();
+    }
+
+    pub fn zoom_out(&mut self) {
+        self.graph.zoom_out();
     }
 }
 
@@ -155,14 +164,18 @@ impl GraphDisplay {
         }
     }
 
+    pub fn update_display_size(&mut self, display_width: f32, display_height: f32) {
+        self.display_width = display_width;
+        self.display_height = display_height;
+    }
+
     pub fn pan(&mut self, x: f32, y: f32) {
         let pan_rate = (DISPLAY_PAN_RATE * 2.0) / self.display_height;
-        let mut x_subtrahend: f32;
+        let mut x_addend: f32;
         if x < 0.0 {
-            x_subtrahend =
-                (-(x.powf(DISPLAY_PAN_EXPONENT) * pan_rate)) / self.display_aspect_ratio();
+            x_addend = (-(x.powf(DISPLAY_PAN_EXPONENT) * pan_rate)) / self.get_aspect_ratio();
         } else {
-            x_subtrahend = (x.powf(DISPLAY_PAN_EXPONENT) * pan_rate) / self.display_aspect_ratio();
+            x_addend = (x.powf(DISPLAY_PAN_EXPONENT) * pan_rate) / self.get_aspect_ratio();
         }
         let mut y_addend: f32;
         if y < 0.0 {
@@ -170,14 +183,17 @@ impl GraphDisplay {
         } else {
             y_addend = y.powf(DISPLAY_PAN_EXPONENT) * pan_rate;
         }
-        let new_x = self.display_offset.x - x_subtrahend;
+        let new_x = self.display_offset.x + x_addend;
         let new_y = self.display_offset.y + y_addend;
         self.display_offset = geometry::Vector2::new(new_x, new_y);
     }
 
-    pub fn update_display_size(&mut self, display_width: f32, display_height: f32) {
-        self.display_width = display_width;
-        self.display_height = display_height;
+    pub fn zoom_in(&mut self) {
+        self.display_scale *= DISPLAY_ZOOM_RATE;
+    }
+
+    pub fn zoom_out(&mut self) {
+        self.display_scale /= DISPLAY_ZOOM_RATE;
     }
 
     pub fn update_clipspace_vertices(&mut self) {
@@ -196,7 +212,7 @@ impl GraphDisplay {
             }
         }
 
-        let aspect_ratio = self.display_aspect_ratio();
+        let aspect_ratio = self.get_aspect_ratio();
         self.clipspace_vertices = self
             .layout
             .node_locations
@@ -218,7 +234,7 @@ impl GraphDisplay {
 }
 
 impl GraphDisplay {
-    fn display_aspect_ratio(&self) -> f32 {
+    fn get_aspect_ratio(&self) -> f32 {
         self.display_width / self.display_height
     }
 
