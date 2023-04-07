@@ -4,6 +4,7 @@ use array2d::Array2D;
 use js_sys::Uint8Array;
 use log::{debug, Level};
 use serde::Serialize;
+use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsValue;
 use web_sys::window;
@@ -242,13 +243,12 @@ impl GraphDisplay {
     }
 
     pub fn get_visible_node_page_locations(&self) -> Result<JsValue, JsValue> {
-        let mut locations: Vec<NodeLocation> = Vec::new();
+        let mut locations: HashMap<usize, geometry::Vector2> = HashMap::new();
         for (node_id, loc) in self.clipspace_locations.iter().enumerate() {
             if CLIPSPACE_BOUNDS.contains(loc) {
                 let x = ((loc.x + 1.0) / 2.0) * self.display_width;
                 let y = self.display_height - (((loc.y + 1.0) / 2.0) * self.display_height);
-                let node_loc = NodeLocation { node_id, x, y };
-                locations.push(node_loc);
+                locations.insert(node_id, geometry::Vector2 { x, y });
             }
         }
         Ok(serde_wasm_bindgen::to_value(&locations)?)

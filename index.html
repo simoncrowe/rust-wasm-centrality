@@ -160,19 +160,26 @@
             graph.update_clipspace_vertices();
 
             const nodePageLocations = graph.get_visible_node_page_locations();
-            nodePageLocations.forEach(nodeLoc => {
-              const data = accountsData.get(nodeLoc.node_id);
+            console.log(nodePageLocations);
+            document.querySelectorAll('.nodeLink').forEach( (link) => {
+              const accountId = parseInt(link.id.substring(1));
+              if (!nodePageLocations.has(accountId)) {
+                link.remove();
+              };
+            });
+            nodePageLocations.forEach((loc, accountId) => {
+              const data = accountsData.get(accountId);
 
-              let link = document.querySelector(`#node${nodeLoc.node_id}.nodeLink`);
+              let link = document.querySelector(`#a${accountId}.nodeLink`);
               if (link == undefined) {
                 link = createLink(data.name, data.url);
                 link.className = 'nodeLink';
-                link.id = `node${nodeLoc.node_id}`;
+                link.id = `a${accountId}`;
                 link.style.position = 'absolute';
                 document.body.appendChild(link);
               }
-              link.style.left = `${nodeLoc.x}px`;
-              link.style.top = `${nodeLoc.y}px`;
+              link.style.left = `${loc.x}px`;
+              link.style.top = `${loc.y}px`;
             });
 
             // Load vertex positions

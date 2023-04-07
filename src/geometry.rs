@@ -1,10 +1,25 @@
 use log::debug;
+use serde::Serialize;
 use wasm_bindgen::prelude::*;
 use web_sys::window;
 
 pub const VALUES_PER_SQUARE: usize = 12;
 pub const VALUES_PER_LINE: usize = 4;
 
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+pub struct Vector2 {
+    pub x: f32,
+    pub y: f32,
+}
+
+impl Vector2 {
+    pub fn new(x: f32, y: f32) -> Vector2 {
+        Vector2 { x, y }
+    }
+}
+
+#[cfg(test)]
+mod tests;
 /// Translates a point in graph layout space to display space
 ///
 /// (Display space is clip space in terms of the graphics library.)
@@ -109,18 +124,3 @@ impl<'a> Iterator for PointsIter<'a> {
         Some(point)
     }
 }
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Vector2 {
-    pub x: f32,
-    pub y: f32,
-}
-
-impl Vector2 {
-    pub fn new(x: f32, y: f32) -> Vector2 {
-        Vector2 { x, y }
-    }
-}
-
-#[cfg(test)]
-mod tests;
