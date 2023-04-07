@@ -43,27 +43,29 @@
       </table>
     </div>
     <script type="module" defer>
+      const accountsData = new Map();
       const tableBody = document.getElementById("table-body");
 
-      const addRow = (rank, name, username) => {
+      const createLink = (text, url) => {
+        const anchor = document.createElement("a");
+        const textNode = document.createTextNode(text);
+        anchor.appendChild(textNode);
+        anchor.href = url;
+        anchor.target = '_blank';
+        return anchor
+      }
+
+      const addRow = (rank, text, url) => {
         const row = document.createElement("tr");
 
         const rankData = document.createElement("td");
         rankData.textContent = rank;
         row.appendChild(rankData);
 
-        let accountText;
-        if (name !== '') {
-          accountText = document.createTextNode(name);
-        } else {
-          accountText = document.createTextNode(username);
-        }
-        const accountLink = document.createElement("a");
-        accountLink.appendChild(accountText);
-        accountLink.href = `https://instagram.com/${username}`;
-        accountLink.target = '_blank';
-        const nameData = document.createElement("td");
-        row.appendChild(accountLink);
+        const linkData = document.createElement("td");
+        const link = createLink(text, url);
+        linkData.appendChild(link);
+        row.appendChild(linkData);
 
         tableBody.appendChild(row);
       }
@@ -71,12 +73,22 @@
       const resp = await fetch("./nodes.json");
       const data = await resp.json();
       data.forEach(node => {
-        addRow(node.rank, node.name, node.username);
+        const url =  `https://instagram.com/${node.username}`
+        let name;
+        if (node.name !== '') {
+          name = node.name;
+        } else {
+          name = node.username;
+        }
+        addRow(node.rank, name, url);
+        const nodeID = node.rank - 1;
+        accountsData.set(nodeID, {name: name, url: url});
       });
 
       import init, { init_logging, get_memory, GraphFacade } from "./pkg/rust_wasm_centrality.js";
 
       init().then(async () => {
+        console.log(accountsData);
         init_logging();
         const wasmMemory = get_memory();
         const spawnSize = 1500;
@@ -143,10 +155,26 @@
 
             gl.useProgram(program);
             gl.enableVertexAttribArray(positionAttrLoc);
+
             graph.update_display_size(window.innerWidth, window.innerHeight);
             graph.update_clipspace_vertices();
-            let nodePixelLocations = graph.get_visible_node_page_locations();
-            console.log(nodePixelLocations[0]);
+
+            const nodePageLocations = graph.get_visible_node_page_locations();
+            nodePageLocations.forEach(nodeLoc => {
+              const data = accountsData.get(nodeLoc.node_id);
+
+              let link = document.querySelector(`#node${nodeLoc.node_id}.nodeLink`);
+              if (link == undefined) {
+                link = createLink(data.name, data.url);
+                link.className = 'nodeLink';
+                link.id = `node${nodeLoc.node_id}`;
+                link.style.position = 'absolute';
+                document.body.appendChild(link);
+              }
+              link.style.left = `${nodeLoc.x}px`;
+              link.style.top = `${nodeLoc.y}px`;
+            });
+
             // Load vertex positions
             const verticesPtr = graph.get_vertices_ptr();
             const vertices = new Float32Array(wasmMemory.buffer,
@@ -157,19 +185,19 @@
             gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
             // Tell GL how to unpack positionBuffer
-            let size = 2;
-            let type = gl.FLOAT;
-            let normalize = false;
-            let stride = 0;
-            let unpackOffset = 0;
+            const size = 2;
+            const type = gl.FLOAT;
+            const normalize = false;
+            const stride = 0;
+            const unpackOffset = 0;
             gl.vertexAttribPointer(positionAttrLoc, size, type,
                                    normalize, stride, unpackOffset);
 
 
             // Tell GL to draw edge lines from indices
-            let offset = 0;
-            let count = edgeCount * 2;
-            let indexType = gl.UNSIGNED_SHORT;
+            const offset = 0;
+            const count = edgeCount * 2;
+            const indexType = gl.UNSIGNED_SHORT;
             gl.drawElements(gl.LINES, count, indexType, offset);
 
         };
