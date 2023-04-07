@@ -145,7 +145,8 @@
             gl.enableVertexAttribArray(positionAttrLoc);
             graph.update_display_size(window.innerWidth, window.innerHeight);
             graph.update_clipspace_vertices();
-
+            let nodePixelLocations = graph.get_visible_node_page_locations();
+            console.log(nodePixelLocations[0]);
             // Load vertex positions
             const verticesPtr = graph.get_vertices_ptr();
             const vertices = new Float32Array(wasmMemory.buffer,

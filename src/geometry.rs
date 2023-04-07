@@ -20,8 +20,8 @@ pub fn layout_to_clipspace(
 }
 
 pub struct Rect {
-    bottom_left: Vector2,
-    top_right: Vector2,
+    pub bottom_left: Vector2,
+    pub top_right: Vector2,
 }
 
 impl Rect {
@@ -63,6 +63,13 @@ impl Points {
         }
     }
 
+    pub fn iter(&self) -> PointsIter {
+        PointsIter {
+            points: self,
+            index: 0,
+        }
+    }
+
     pub fn get_data(&self) -> Vec<f32> {
         self.data.clone()
     }
@@ -82,6 +89,24 @@ impl Points {
         Points {
             data: clipspace_data,
         }
+    }
+}
+
+pub struct PointsIter<'a> {
+    points: &'a Points,
+    index: usize,
+}
+
+impl<'a> Iterator for PointsIter<'a> {
+    type Item = Vector2;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index >= self.points.len() {
+            return None;
+        }
+        let point = self.points.get_point(self.index);
+        self.index += 1;
+        Some(point)
     }
 }
 
