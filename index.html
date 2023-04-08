@@ -26,6 +26,11 @@
         overflow-x: clip;
         overflow-y: scroll;
         background-color: rgba(210, 210, 210, 0.75);
+        z-index: 2;
+      }
+      .nodeLink {
+        background-color: rgba(210, 210, 210, 0.75);
+        z-index: 1;
       }
       table {
         width: 100%;
@@ -91,8 +96,8 @@
         console.log(accountsData);
         init_logging();
         const wasmMemory = get_memory();
-        const spawnSize = 1500;
-        const nodeCount = 20039;
+        const spawnSize = 50;
+        const nodeCount = 1001;
         let edgeCount = 0;
         const displayScale = 1;
         const graph = GraphFacade.new(nodeCount, spawnSize,
