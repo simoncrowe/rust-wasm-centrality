@@ -95,8 +95,8 @@
       init().then(async () => {
         init_logging();
         const wasmMemory = get_memory();
-        const spawnSize = 50;
         const nodeCount = accountsData.length;
+        const spawnSize = nodeCount/5;
         let edgeCount = 0;
         const displayScale = 1;
         const graph = GraphFacade.new(nodeCount, spawnSize,
@@ -221,8 +221,8 @@
           gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, vertexIndices, gl.STATIC_DRAW);
         };
         const renderFrameWithEdgeBuffer = (now) => {
-          updateEdgeBuffer();
           renderFrame();
+          updateEdgeBuffer();
         };
         const renderLoop = (now) => {
             renderFrame(now);
@@ -230,16 +230,14 @@
         };
         fetch("./targets.bin")
           .then(async response => {
-            // Force GL to initialise?
 
             const respReader = response.body.getReader();
             while(true) {
               const {done, value} = await respReader.read();
-              if (!done) {
-                graph.load_edges(value);
-                renderFrameWithEdgeBuffer();
-              }
-              else{break;}
+              if (done && value === undefined) {break;}
+
+              graph.load_edges(value);
+              renderFrameWithEdgeBuffer();
             }
             renderLoop();
           });
