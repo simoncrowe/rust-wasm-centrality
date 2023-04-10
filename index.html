@@ -48,7 +48,7 @@
       </table>
     </div>
     <script type="module" defer>
-      const accountsData = new Map();
+      const accountsData = [];
       const tableBody = document.getElementById("table-body");
 
       const createLink = (text, url) => {
@@ -87,17 +87,16 @@
         }
         addRow(node.rank, name, url);
         const nodeID = node.rank - 1;
-        accountsData.set(nodeID, {name: name, url: url});
+        accountsData.push({name: name, url: url});
       });
 
       import init, { init_logging, get_memory, GraphFacade } from "./pkg/rust_wasm_centrality.js";
 
       init().then(async () => {
-        console.log(accountsData);
         init_logging();
         const wasmMemory = get_memory();
         const spawnSize = 50;
-        const nodeCount = 1001;
+        const nodeCount = accountsData.length;
         let edgeCount = 0;
         const displayScale = 1;
         const graph = GraphFacade.new(nodeCount, spawnSize,
@@ -165,7 +164,6 @@
             graph.update_clipspace_vertices();
 
             const nodePageLocations = graph.get_visible_node_page_locations();
-            console.log(nodePageLocations);
             document.querySelectorAll('.nodeLink').forEach( (link) => {
               const accountId = parseInt(link.id.substring(1));
               if (!nodePageLocations.has(accountId)) {
@@ -173,7 +171,7 @@
               };
             });
             nodePageLocations.forEach((loc, accountId) => {
-              const data = accountsData.get(accountId);
+              const data = accountsData[accountId];
 
               let link = document.querySelector(`#a${accountId}.nodeLink`);
               if (link == undefined) {
