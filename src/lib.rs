@@ -152,6 +152,8 @@ pub struct GraphDisplay {
     display_height: f32,
     display_scale: f32,
     display_offset: geometry::Vector2,
+    pan_target: geometry::Vector2,
+    pan_actual: geometry::Vector2,
     clipspace_locations: geometry::Points,
     clipspace_vertices: Vec<f32>,
     vertex_indices: Vec<u16>,
@@ -172,12 +174,16 @@ impl GraphDisplay {
                 .to_clipspace(display_offset, &display_scale, &aspect_ratio);
         let clipspace_vertices = clipspace_locations.get_data();
         let vertex_indices: Vec<u16> = Vec::new();
+        let pan_target = geometry::Vector2 { x: 0.0, y: 0.0 };
+        let pan_actual = geometry::Vector2 { x: 0.0, y: 0.0 };
         GraphDisplay {
             layout,
             display_width,
             display_height,
             display_scale,
             display_offset,
+            pan_target,
+            pan_actual,
             clipspace_locations,
             clipspace_vertices,
             vertex_indices,
@@ -203,9 +209,10 @@ impl GraphDisplay {
         } else {
             y_addend = y.powf(DISPLAY_PAN_EXPONENT) * pan_rate;
         }
-        let new_x = self.display_offset.x + x_addend;
-        let new_y = self.display_offset.y + y_addend;
-        self.display_offset = geometry::Vector2::new(new_x, new_y);
+        self.pan_target.x += x_addend;
+        self.pan_target.y += y_addend;
+
+        self.display_offset += self.pan_actual;
     }
 
     pub fn zoom_in(&mut self) {

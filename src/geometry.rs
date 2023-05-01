@@ -1,5 +1,6 @@
 use log::debug;
 use serde::Serialize;
+use std::ops::{Add, AddAssign, Div, Mul};
 use wasm_bindgen::prelude::*;
 use web_sys::window;
 
@@ -15,6 +16,53 @@ pub struct Vector2 {
 impl Vector2 {
     pub fn new(x: f32, y: f32) -> Vector2 {
         Vector2 { x, y }
+    }
+
+    pub fn unit(self) -> Vector2 {
+        let magnitude = (self.x.powf(2.0) + self.y.powf(2.0)).sqrt();
+        self / magnitude
+    }
+}
+
+impl Add for Vector2 {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        Self {
+            x: self.x + other.x,
+            y: self.y + other.y,
+        }
+    }
+}
+
+impl AddAssign for Vector2 {
+    fn add_assign(&mut self, other: Self) {
+        *self = Self {
+            x: self.x + other.x,
+            y: self.y + other.y,
+        };
+    }
+}
+
+impl Mul<f32> for Vector2 {
+    type Output = Self;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        Self {
+            x: self.x * rhs,
+            y: self.y * rhs,
+        }
+    }
+}
+
+impl Div<f32> for Vector2 {
+    type Output = Self;
+
+    fn div(self, rhs: f32) -> Self::Output {
+        Self {
+            x: self.x / rhs,
+            y: self.y / rhs,
+        }
     }
 }
 
