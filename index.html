@@ -105,11 +105,11 @@
 
         const canvas = document.getElementById("graph-canvas");
         let dragging = false;
-        canvas.addEventListener("mousedown", e => {dragging = true;});
+        canvas.addEventListener("pointerdown", e => {dragging = true;});
         const stopDragging = e => {dragging = false};
-        canvas.addEventListener("mouseup", stopDragging);
-        canvas.addEventListener("mouseleave", stopDragging);
-        canvas.addEventListener("mousemove", e => {
+        canvas.addEventListener("pointerup", stopDragging);
+        canvas.addEventListener("pointerleave", stopDragging);
+        canvas.addEventListener("pointermove", e => {
           if (dragging) {
             graph.pan(-e.movementX, e.movementY);
           };
