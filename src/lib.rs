@@ -3,6 +3,8 @@ use byteorder::{ByteOrder, LittleEndian};
 use array2d::Array2D;
 use js_sys::Uint8Array;
 use log::{debug, Level};
+use serde::Serialize;
+use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsValue;
 use web_sys::window;
@@ -14,6 +16,10 @@ mod geometry;
 const DISPLAY_PAN_RATE: f32 = 1.0;
 const DISPLAY_PAN_EXPONENT: f32 = 2.0;
 const DISPLAY_ZOOM_RATE: f32 = 1.25;
+const CLIPSPACE_BOUNDS: geometry::Rect = geometry::Rect {
+    bottom_left: geometry::Vector2 { x: -1.0, y: -1.0 },
+    top_right: geometry::Vector2 { x: 1.0, y: 1.0 },
+};
 
 #[wasm_bindgen]
 pub fn init_logging() {
@@ -29,6 +35,13 @@ pub fn get_memory() -> JsValue {
 #[wasm_bindgen]
 pub struct GraphFacade {
     graph: GraphDisplay,
+}
+
+#[derive(Serialize)]
+pub struct NodeLocation {
+    node_id: usize,
+    x: f32,
+    y: f32,
 }
 
 #[wasm_bindgen]
@@ -80,6 +93,10 @@ impl GraphFacade {
 
     pub fn zoom_out(&mut self) {
         self.graph.zoom_out();
+    }
+
+    pub fn get_visible_node_page_locations(&self) -> Result<JsValue, JsValue> {
+        self.graph.get_visible_node_page_locations()
     }
 }
 
@@ -135,6 +152,7 @@ pub struct GraphDisplay {
     display_height: f32,
     display_scale: f32,
     display_offset: geometry::Vector2,
+    clipspace_locations: geometry::Points,
     clipspace_vertices: Vec<f32>,
     vertex_indices: Vec<u16>,
 }
@@ -148,10 +166,11 @@ impl GraphDisplay {
     ) -> GraphDisplay {
         let aspect_ratio = display_width / display_height;
         let display_offset = layout.node_locations.get_point(0);
-        let clipspace_vertices = layout
-            .node_locations
-            .to_clipspace(display_offset, &display_scale, &aspect_ratio)
-            .get_data();
+        let clipspace_locations =
+            layout
+                .node_locations
+                .to_clipspace(display_offset, &display_scale, &aspect_ratio);
+        let clipspace_vertices = clipspace_locations.get_data();
         let vertex_indices: Vec<u16> = Vec::new();
         GraphDisplay {
             layout,
@@ -159,6 +178,7 @@ impl GraphDisplay {
             display_height,
             display_scale,
             display_offset,
+            clipspace_locations,
             clipspace_vertices,
             vertex_indices,
         }
@@ -197,6 +217,7 @@ impl GraphDisplay {
     }
 
     pub fn update_clipspace_vertices(&mut self) {
+        // Ensure that the indices used for drawing edges are up-to-date
         let edges_count = self.count_edges();
         if edges_count > (self.vertex_indices.len() / 2) {
             self.vertex_indices.resize(edges_count * 2, u16::MAX);
@@ -213,11 +234,24 @@ impl GraphDisplay {
         }
 
         let aspect_ratio = self.get_aspect_ratio();
-        self.clipspace_vertices = self
-            .layout
-            .node_locations
-            .to_clipspace(self.display_offset, &self.display_scale, &aspect_ratio)
-            .get_data();
+        self.clipspace_locations = self.layout.node_locations.to_clipspace(
+            self.display_offset,
+            &self.display_scale,
+            &aspect_ratio,
+        );
+        self.clipspace_vertices = self.clipspace_locations.get_data();
+    }
+
+    pub fn get_visible_node_page_locations(&self) -> Result<JsValue, JsValue> {
+        let mut locations: HashMap<usize, geometry::Vector2> = HashMap::new();
+        for (node_id, loc) in self.clipspace_locations.iter().enumerate() {
+            if CLIPSPACE_BOUNDS.contains(loc) {
+                let x = ((loc.x + 1.0) / 2.0) * self.display_width;
+                let y = self.display_height - (((loc.y + 1.0) / 2.0) * self.display_height);
+                locations.insert(node_id, geometry::Vector2 { x, y });
+            }
+        }
+        Ok(serde_wasm_bindgen::to_value(&locations)?)
     }
 
     pub fn get_vertices_ptr(&self) -> *const f32 {

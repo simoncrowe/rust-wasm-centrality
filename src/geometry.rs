@@ -1,10 +1,25 @@
 use log::debug;
+use serde::Serialize;
 use wasm_bindgen::prelude::*;
 use web_sys::window;
 
 pub const VALUES_PER_SQUARE: usize = 12;
 pub const VALUES_PER_LINE: usize = 4;
 
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+pub struct Vector2 {
+    pub x: f32,
+    pub y: f32,
+}
+
+impl Vector2 {
+    pub fn new(x: f32, y: f32) -> Vector2 {
+        Vector2 { x, y }
+    }
+}
+
+#[cfg(test)]
+mod tests;
 /// Translates a point in graph layout space to display space
 ///
 /// (Display space is clip space in terms of the graphics library.)
@@ -20,8 +35,8 @@ pub fn layout_to_clipspace(
 }
 
 pub struct Rect {
-    bottom_left: Vector2,
-    top_right: Vector2,
+    pub bottom_left: Vector2,
+    pub top_right: Vector2,
 }
 
 impl Rect {
@@ -63,6 +78,13 @@ impl Points {
         }
     }
 
+    pub fn iter(&self) -> PointsIter {
+        PointsIter {
+            points: self,
+            index: 0,
+        }
+    }
+
     pub fn get_data(&self) -> Vec<f32> {
         self.data.clone()
     }
@@ -85,17 +107,20 @@ impl Points {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Vector2 {
-    pub x: f32,
-    pub y: f32,
+pub struct PointsIter<'a> {
+    points: &'a Points,
+    index: usize,
 }
 
-impl Vector2 {
-    pub fn new(x: f32, y: f32) -> Vector2 {
-        Vector2 { x, y }
+impl<'a> Iterator for PointsIter<'a> {
+    type Item = Vector2;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index >= self.points.len() {
+            return None;
+        }
+        let point = self.points.get_point(self.index);
+        self.index += 1;
+        Some(point)
     }
 }
-
-#[cfg(test)]
-mod tests;
