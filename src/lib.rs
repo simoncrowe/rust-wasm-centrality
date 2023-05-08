@@ -1,20 +1,18 @@
 use byteorder::{ByteOrder, LittleEndian};
 
-use array2d::Array2D;
 use js_sys::Uint8Array;
 use log::{debug, Level};
 use serde::Serialize;
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsValue;
-use web_sys::window;
 extern crate console_error_panic_hook;
 use std::panic;
 
 mod geometry;
 
 const DISPLAY_PAN_RATE: f32 = 1.0;
-const DISPLAY_PAN_EXPONENT: f32 = 2.0;
+const DISPLAY_PAN_DECAY_RATE: f32 = 2.0;
 const DISPLAY_ZOOM_RATE: f32 = 1.25;
 const CLIPSPACE_BOUNDS: geometry::Rect = geometry::Rect {
     bottom_left: geometry::Vector2 { x: -1.0, y: -1.0 },
@@ -152,6 +150,8 @@ pub struct GraphDisplay {
     display_height: f32,
     display_scale: f32,
     display_offset: geometry::Vector2,
+    pan_target: geometry::Vector2,
+    pan_actual: geometry::Vector2,
     clipspace_locations: geometry::Points,
     clipspace_vertices: Vec<f32>,
     vertex_indices: Vec<u16>,
@@ -172,12 +172,16 @@ impl GraphDisplay {
                 .to_clipspace(display_offset, &display_scale, &aspect_ratio);
         let clipspace_vertices = clipspace_locations.get_data();
         let vertex_indices: Vec<u16> = Vec::new();
+        let pan_target = geometry::Vector2 { x: 0.0, y: 0.0 };
+        let pan_actual = geometry::Vector2 { x: 0.0, y: 0.0 };
         GraphDisplay {
             layout,
             display_width,
             display_height,
             display_scale,
             display_offset,
+            pan_target,
+            pan_actual,
             clipspace_locations,
             clipspace_vertices,
             vertex_indices,
@@ -191,21 +195,9 @@ impl GraphDisplay {
 
     pub fn pan(&mut self, x: f32, y: f32) {
         let pan_rate = (DISPLAY_PAN_RATE * 2.0) / self.display_height;
-        let mut x_addend: f32;
-        if x < 0.0 {
-            x_addend = (-(x.powf(DISPLAY_PAN_EXPONENT) * pan_rate)) / self.get_aspect_ratio();
-        } else {
-            x_addend = (x.powf(DISPLAY_PAN_EXPONENT) * pan_rate) / self.get_aspect_ratio();
-        }
-        let mut y_addend: f32;
-        if y < 0.0 {
-            y_addend = -(y.powf(DISPLAY_PAN_EXPONENT) * pan_rate);
-        } else {
-            y_addend = y.powf(DISPLAY_PAN_EXPONENT) * pan_rate;
-        }
-        let new_x = self.display_offset.x + x_addend;
-        let new_y = self.display_offset.y + y_addend;
-        self.display_offset = geometry::Vector2::new(new_x, new_y);
+        debug!("Inputs - x: {}, y: {}", x, y);
+        self.pan_target.x += x * pan_rate;
+        self.pan_target.y += y * pan_rate;
     }
 
     pub fn zoom_in(&mut self) {
@@ -232,6 +224,8 @@ impl GraphDisplay {
                 }
             }
         }
+
+        self.update_pan();
 
         let aspect_ratio = self.get_aspect_ratio();
         self.clipspace_locations = self.layout.node_locations.to_clipspace(
@@ -278,5 +272,35 @@ impl GraphDisplay {
             .iter()
             .map(|targets| targets.len())
             .sum()
+    }
+
+    fn update_pan(&mut self) {
+        let pan_rate = (DISPLAY_PAN_RATE * 2.0) / self.display_height;
+        let pan_target_unit = self.pan_target.unit();
+        match pan_target_unit {
+            Some(pan_target_unit) => {
+                self.pan_actual += self.pan_target * pan_rate;
+                if self.pan_target.magnitude() > pan_rate {
+                    self.pan_target -= pan_target_unit * pan_rate * DISPLAY_PAN_DECAY_RATE;
+                } else {
+                    self.pan_target = geometry::Vector2 { x: 0.0, y: 0.0 };
+                }
+            }
+            None => {
+                let pan_actual_unit = self.pan_actual.unit();
+                match pan_actual_unit {
+                    Some(pan_actual_unit) => {
+                        if self.pan_actual.magnitude() > pan_rate {
+                            self.pan_actual -= pan_actual_unit * pan_rate * DISPLAY_PAN_DECAY_RATE;
+                        } else {
+                            self.pan_actual = geometry::Vector2 { x: 0.0, y: 0.0 };
+                        }
+                    }
+                    None => {}
+                }
+            }
+        }
+
+        self.display_offset += self.pan_actual;
     }
 }
