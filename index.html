@@ -104,6 +104,7 @@
                                       displayScale);
 
         const canvas = document.getElementById("graph-canvas");
+        const touchMoveMulti = 10;
         let dragging = false;
         canvas.addEventListener("pointerdown", e => {dragging = true;});
         const stopDragging = e => {dragging = false};
@@ -111,7 +112,12 @@
         canvas.addEventListener("pointerleave", stopDragging);
         canvas.addEventListener("pointermove", e => {
           if (dragging) {
-            graph.pan(-e.movementX, e.movementY);
+            console.log(e);
+            if (e.pointerType == "touch") {
+              graph.pan(-e.movementX * touchMoveMulti, e.movementY * touchMoveMulti);
+            } else {
+              graph.pan(-e.movementX, e.movementY);
+            }
           };
         });
         canvas.addEventListener('wheel', (e) => {

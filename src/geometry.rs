@@ -1,11 +1,5 @@
-use log::debug;
 use serde::Serialize;
-use std::ops::{Add, AddAssign, Div, Mul};
-use wasm_bindgen::prelude::*;
-use web_sys::window;
-
-pub const VALUES_PER_SQUARE: usize = 12;
-pub const VALUES_PER_LINE: usize = 4;
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, SubAssign};
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct Vector2 {
@@ -18,9 +12,18 @@ impl Vector2 {
         Vector2 { x, y }
     }
 
-    pub fn unit(self) -> Vector2 {
-        let magnitude = (self.x.powf(2.0) + self.y.powf(2.0)).sqrt();
-        self / magnitude
+    pub fn magnitude(self) -> f32 {
+        (self.x.powf(2.0) + self.y.powf(2.0)).sqrt()
+    }
+
+    pub fn unit(self) -> Option<Vector2> {
+        let magnitude = self.magnitude();
+
+        if magnitude == 0.0 {
+            return None;
+        }
+
+        Some(self / magnitude)
     }
 }
 
@@ -44,6 +47,15 @@ impl AddAssign for Vector2 {
     }
 }
 
+impl SubAssign for Vector2 {
+    fn sub_assign(&mut self, other: Self) {
+        *self = Self {
+            x: self.x - other.x,
+            y: self.y - other.y,
+        };
+    }
+}
+
 impl Mul<f32> for Vector2 {
     type Output = Self;
 
@@ -60,6 +72,15 @@ impl Div<f32> for Vector2 {
 
     fn div(self, rhs: f32) -> Self::Output {
         Self {
+            x: self.x / rhs,
+            y: self.y / rhs,
+        }
+    }
+}
+
+impl DivAssign<f32> for Vector2 {
+    fn div_assign(&mut self, rhs: f32) {
+        *self = Self {
             x: self.x / rhs,
             y: self.y / rhs,
         }
