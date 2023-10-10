@@ -129,6 +129,10 @@ pub struct Points {
 }
 
 impl Points {
+    pub fn new(data: Vec<f32>) -> Points {
+        return Points { data };
+    }
+
     pub fn new_random(count: usize, spawn_scale: f32) -> Points {
         let data: Vec<f32> = (0..(count * 2))
             .map(|_| js_sys::Math::random() as f32 * spawn_scale)

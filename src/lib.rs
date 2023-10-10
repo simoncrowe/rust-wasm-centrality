@@ -1,6 +1,6 @@
 use byteorder::{ByteOrder, LittleEndian};
 
-use js_sys::Uint8Array;
+use js_sys::{Float32Array, Uint8Array};
 use log::{debug, Level};
 use serde::Serialize;
 use std::collections::HashMap;
@@ -46,12 +46,12 @@ pub struct NodeLocation {
 impl GraphFacade {
     pub fn new(
         node_count: usize,
-        spawn_scale: f32,
+        node_locations: Float32Array,
         display_width: f32,
         display_height: f32,
         display_scale: f32,
     ) -> GraphFacade {
-        let layout = GraphLayout::new(node_count, spawn_scale);
+        let layout = GraphLayout::new(node_count, node_locations);
         let display = GraphDisplay::new(layout, display_width, display_height, display_scale);
         GraphFacade { graph: display }
     }
@@ -107,10 +107,10 @@ pub struct GraphLayout {
 }
 
 impl GraphLayout {
-    pub fn new(node_count: usize, spawn_scale: f32) -> GraphLayout {
+    pub fn new(node_count: usize, locations: Float32Array) -> GraphLayout {
         let node_targets = (0..node_count).map(|_| Vec::new()).collect();
         let node_sources = (0..node_count).map(|_| Vec::new()).collect();
-        let node_locations = geometry::Points::new_random(node_count, spawn_scale);
+        let node_locations = geometry::Points::new(locations.to_vec());
         GraphLayout {
             node_targets,
             node_sources,
