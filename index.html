@@ -100,14 +100,14 @@
         const nodeCount = accountsData.length;
         const spawnSize = nodeCount/5;
         let edgeCount = 0;
-        const displayScale = 0.125;
+        const displayScale = 0.15;
         const locsArray = new Float32Array(nodeLocations);
         const graph = GraphFacade.new(nodeCount, locsArray,
                                       window.innerWidth, window.innerHeight,
                                       displayScale);
 
         const canvas = document.getElementById("graph-canvas");
-        const touchMoveMulti = 10;
+        const touchMoveMulti = 8;
         let dragging = false;
         canvas.addEventListener("pointerdown", e => {dragging = true;});
         const stopDragging = e => {dragging = false};
@@ -117,7 +117,7 @@
           if (dragging) {
             console.log(e);
             if (e.pointerType == "touch") {
-              graph.pan(-e.movementX * touchMoveMulti, e.movementY * touchMoveMulti);
+              graph.pan_touch(-e.movementX * touchMoveMulti, e.movementY * touchMoveMulti);
             } else {
               graph.pan(-e.movementX, e.movementY);
             }

@@ -11,7 +11,7 @@ use std::panic;
 
 mod geometry;
 
-const DISPLAY_PAN_RATE: f32 = 1.0;
+const DISPLAY_PAN_RATE: f32 = 8.0;
 const DISPLAY_PAN_DECAY_RATE: f32 = 2.0;
 const DISPLAY_ZOOM_RATE: f32 = 1.25;
 const CLIPSPACE_BOUNDS: geometry::Rect = geometry::Rect {
@@ -79,6 +79,10 @@ impl GraphFacade {
 
     pub fn get_vertex_indices_len(&self) -> usize {
         self.graph.get_vertex_indices_len()
+    }
+
+    pub fn pan_touch(&mut self, x: f32, y: f32) {
+        self.graph.pan_touch(x, y);
     }
 
     pub fn pan(&mut self, x: f32, y: f32) {
@@ -193,11 +197,18 @@ impl GraphDisplay {
         self.display_height = display_height;
     }
 
-    pub fn pan(&mut self, x: f32, y: f32) {
+    pub fn pan_touch(&mut self, x: f32, y: f32) {
         let pan_rate = (DISPLAY_PAN_RATE * 2.0) / self.display_height;
         debug!("Inputs - x: {}, y: {}", x, y);
         self.pan_target.x += x * pan_rate;
         self.pan_target.y += y * pan_rate;
+    }
+
+    pub fn pan(&mut self, x: f32, y: f32) {
+        let pan_rate = (DISPLAY_PAN_RATE * 2.0) / self.display_height;
+        debug!("Inputs - x: {}, y: {}", x, y);
+        self.display_offset.x += x * pan_rate;
+        self.display_offset.y += y * pan_rate;
     }
 
     pub fn zoom_in(&mut self) {
