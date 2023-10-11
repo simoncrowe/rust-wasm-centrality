@@ -11,8 +11,7 @@ use std::panic;
 
 mod geometry;
 
-const DISPLAY_PAN_RATE: f32 = 8.0;
-const DISPLAY_PAN_DECAY_RATE: f32 = 2.0;
+const DISPLAY_PAN_RATE: f32 = 1.0;
 const DISPLAY_ZOOM_RATE: f32 = 1.25;
 const CLIPSPACE_BOUNDS: geometry::Rect = geometry::Rect {
     bottom_left: geometry::Vector2 { x: -1.0, y: -1.0 },
@@ -198,14 +197,14 @@ impl GraphDisplay {
     }
 
     pub fn pan_touch(&mut self, x: f32, y: f32) {
-        let pan_rate = (DISPLAY_PAN_RATE * 2.0) / self.display_height;
+        let pan_rate = self.get_pan_rate();
         debug!("Inputs - x: {}, y: {}", x, y);
         self.pan_target.x += x * pan_rate;
         self.pan_target.y += y * pan_rate;
     }
 
     pub fn pan(&mut self, x: f32, y: f32) {
-        let pan_rate = (DISPLAY_PAN_RATE * 2.0) / self.display_height;
+        let pan_rate = self.get_pan_rate();
         debug!("Inputs - x: {}, y: {}", x, y);
         self.display_offset.x += x * pan_rate;
         self.display_offset.y += y * pan_rate;
@@ -285,14 +284,22 @@ impl GraphDisplay {
             .sum()
     }
 
+    fn get_pan_rate(&self) -> f32 {
+        ((DISPLAY_PAN_RATE * 2.0) / self.display_scale) / self.display_height
+    }
+
     fn update_pan(&mut self) {
-        let pan_rate = (DISPLAY_PAN_RATE * 2.0) / self.display_height;
+        let pan_rate = self.get_pan_rate();
+        debug!("Pan rate: {}", pan_rate);
         let pan_target_unit = self.pan_target.unit();
+        debug!("Pan target: {:?}", self.pan_target);
+        debug!("Pan target mag: {:?}", self.pan_target.magnitude());
+        debug!("Pan target unit: {:?}", pan_target_unit);
         match pan_target_unit {
             Some(pan_target_unit) => {
                 self.pan_actual += self.pan_target * pan_rate;
                 if self.pan_target.magnitude() > pan_rate {
-                    self.pan_target -= pan_target_unit * pan_rate * DISPLAY_PAN_DECAY_RATE;
+                    self.pan_target -= pan_target_unit * pan_rate;
                 } else {
                     self.pan_target = geometry::Vector2 { x: 0.0, y: 0.0 };
                 }
@@ -302,7 +309,7 @@ impl GraphDisplay {
                 match pan_actual_unit {
                     Some(pan_actual_unit) => {
                         if self.pan_actual.magnitude() > pan_rate {
-                            self.pan_actual -= pan_actual_unit * pan_rate * DISPLAY_PAN_DECAY_RATE;
+                            self.pan_actual -= pan_actual_unit * pan_rate;
                         } else {
                             self.pan_actual = geometry::Vector2 { x: 0.0, y: 0.0 };
                         }
