@@ -49,6 +49,7 @@
     </div>
     <script type="module" defer>
       const accountsData = [];
+      const nodeLocations = [];
       const tableBody = document.getElementById("table-body");
 
       const createLink = (text, url) => {
@@ -88,6 +89,7 @@
         addRow(node.rank, name, url);
         const nodeID = node.rank - 1;
         accountsData.push({name: name, url: url});
+        nodeLocations.push(node.x, node.y)
       });
 
       import init, { init_logging, get_memory, GraphFacade } from "./pkg/rust_wasm_centrality.js";
@@ -98,8 +100,9 @@
         const nodeCount = accountsData.length;
         const spawnSize = nodeCount/5;
         let edgeCount = 0;
-        const displayScale = 1;
-        const graph = GraphFacade.new(nodeCount, spawnSize,
+        const displayScale = 0.125;
+        const locsArray = new Float32Array(nodeLocations);
+        const graph = GraphFacade.new(nodeCount, locsArray,
                                       window.innerWidth, window.innerHeight,
                                       displayScale);
 
