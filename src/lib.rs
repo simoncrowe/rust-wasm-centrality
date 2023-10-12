@@ -198,14 +198,12 @@ impl GraphDisplay {
 
     pub fn pan_touch(&mut self, x: f32, y: f32) {
         let pan_rate = self.get_pan_rate();
-        debug!("Inputs - x: {}, y: {}", x, y);
         self.pan_target.x += x * pan_rate;
         self.pan_target.y += y * pan_rate;
     }
 
     pub fn pan(&mut self, x: f32, y: f32) {
         let pan_rate = self.get_pan_rate();
-        debug!("Inputs - x: {}, y: {}", x, y);
         self.display_offset.x += x * pan_rate;
         self.display_offset.y += y * pan_rate;
     }
@@ -290,11 +288,7 @@ impl GraphDisplay {
 
     fn update_pan(&mut self) {
         let pan_rate = self.get_pan_rate();
-        debug!("Pan rate: {}", pan_rate);
         let pan_target_unit = self.pan_target.unit();
-        debug!("Pan target: {:?}", self.pan_target);
-        debug!("Pan target mag: {:?}", self.pan_target.magnitude());
-        debug!("Pan target unit: {:?}", pan_target_unit);
         match pan_target_unit {
             Some(pan_target_unit) => {
                 self.pan_actual += self.pan_target * pan_rate;

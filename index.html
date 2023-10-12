@@ -2,18 +2,19 @@
 <html lang="en-US">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1 user-scalable=no" />
     <title>GRAPH</title>
     <style type="text/css">
       body, html {
+        user-select: none;
         margin: 0;
         padding: 0;
-        height:100%;
+        height: 100%;
       }
       #graph-canvas {
         position:absolute;
-        width:100%;
-        height:100%;
+        width: 100%;
+        height: 100%;
       }
       #table-outer-container {
         position: absolute;
@@ -28,15 +29,24 @@
       }
       #table-inner-container {
         position: sticky;
-        height: 95%;
+        height: 97%;
         overflow-x: clip;
         overflow-y: scroll;
       }
       #table-min-max-button {
-        height: 5%;
-        text-align: center;
-        font-size: 1.4em;
+        height: 3%;
         background-color: rgba(190, 190, 190, 0.75);
+        border: 1px solid #999;
+        text-align: center;
+      }
+      #table-min-max-button>svg {
+        padding: 1.2%;
+        height: 45%;
+        fill: #555;
+        margin: 0 auto;
+      }
+      #table-min-max-button:hover {
+        background-color: rgba(190, 190, 190, 1);
       }
       #zoom-container {
         position: absolute;
@@ -46,8 +56,8 @@
         z-index: 4;
       }
       .zoom-button {
-        margin-right: 0.5em;
-        font-size: 1.6em;
+        margin-right: 0.2em;
+        font-size: 1.8em;
         float: right;
         fill: #999;
         stroke-width: 3;
@@ -73,11 +83,11 @@
     <canvas id="graph-canvas"></canvas>
     <div id="table-outer-container">
       <div id="table-min-max-button">
-        <svg viewBox="0 0 20 10" height="1em" >
-          <g><path fill="#666" d="M 0,0 10,10 20,0 Z"/></g>
+        <svg viewBox="0 0 20 10" height="1em" style="display: none;" id="table-max-graphic" >
+          <g><path d="M 0,0 10,10 20,0 Z"/></g>
         </svg>
-        <svg viewBox="0 0 20 10" height="1em">
-          <g><path fill="#666" d="M 0,10 10,0 20,10 Z"/></g>
+        <svg viewBox="0 0 20 10" height="1em" id="table-min-graphic">
+          <g><path d="M 0,10 10,0 20,10 Z"/></g>
         </svg>
       </div>
       <div id="table-inner-container">
@@ -89,18 +99,17 @@
     <div id="zoom-container">
       <svg class="zoom-button" id="zoom-in-button" height="1em" viewBox="0 0 50 50">
         <g>
-          <path d="M 25,5 C 14,5 5,14 5,25 5,36 14,45 25,45 37.338897,45.000165 45.04668,35.035171 45,25 44.953648,15.035245 38.028264,4.9998268 25,5 Z m -2.999792,7 H 28 V 22.000208 H 38 V 28 H 28 V 38 H 22.000208 V 28 H 11.999784 v -5.999792 h 10.000424 z" />
+          <path d="M 25 5 A 20 20 0 0 0 5 25 A 20 20 0 0 0 25 45 A 20 20 0 0 0 45 25 A 20 20 0 0 0 25 5 z M 22 11 L 28 11 L 28 22 L 39 22 L 39 28 L 28 28 L 28 39 L 22 39 L 22 28 L 11 28 L 11 22 L 22 22 L 22 11 z" />
         </g>
       </svg>
       <svg class="zoom-button" id="zoom-out-button" height="1em" viewBox="0 0 50 50">
         <g>
           <path
-             d="M 25.003642 5.0007284 A 20.003681 19.997808 0 0 0 5.0002116 24.998474 A 20.003681 19.997808 0 0 0 25.003642 44.99622 A 20.003681 19.997808 0 0 0 45.007589 24.998474 A 20.003681 19.997808 0 0 0 25.003642 5.0007284 z M 11.999784 22.000208 L 37.951172 22.000208 L 37.951172 28.029814 L 11.999784 28.029814 L 11.999784 22.000208 z " />
+           d="M 25 5 A 20 20 0 0 0 5 25 A 20 20 0 0 0 25 45 A 20 20 0 0 0 45 25 A 20 20 0 0 0 25 5 z M 11 22 L 39 22 L 39 28 L 11 28 L 11 22 z" />
         </g>
     </svg>
     </div>
     <script type="module" defer>
-      let tableMinimised = 0;
       const accountsData = [];
       const nodeLocations = [];
       const tableBody = document.getElementById("table-body");
@@ -112,7 +121,7 @@
         anchor.href = url;
         anchor.target = '_blank';
         return anchor
-      }
+      };
 
       const addRow = (rank, text, url) => {
         const row = document.createElement("tr");
@@ -127,7 +136,7 @@
         row.appendChild(linkData);
 
         tableBody.appendChild(row);
-      }
+      };
 
       const resp = await fetch("./nodes.json");
       const data = await resp.json();
@@ -145,6 +154,66 @@
         nodeLocations.push(node.x, node.y)
       });
 
+      const tableMinMaxRate = 7.5;
+      const canvas = document.getElementById("graph-canvas");
+      const tableOuter = document.getElementById("table-outer-container");
+      const tableInner = document.getElementById("table-inner-container");
+      const tableMinMaxButton = document.getElementById("table-min-max-button");
+      const tableMinGraphic = document.getElementById("table-min-graphic");
+      const tableMaxGraphic = document.getElementById("table-max-graphic");
+      let tableMaximised = 1.0;
+      let tableMaximising = false;
+      let tableMinimising = false;
+
+      const minimiseTable = () => {
+        if (tableMaximised === 1.0) {
+          tableMinimising = true;
+          tableInner.style["display"] = "none";
+          tableOuter.style["height"] = "1.25em";
+          tableMinMaxButton.style["height"] = "100%";
+        }
+      };
+      const maximiseTable = () => {
+        if (tableMaximised === 0.0) {
+          tableMaximising = true;
+        }
+      };
+      const updateTablePosition = deltaTime => {
+        if (tableMaximising && tableMaximised !== 1.0) {
+          tableMaximised += tableMinMaxRate * deltaTime;
+          if (tableMaximised >= 1.0) {
+            tableMaximised = 1.0;
+            tableMaximising = false;
+            tableInner.style["display"] = "block";
+            tableOuter.style["height"] = "75%";
+            tableMinMaxButton.style["height"] = "3%";
+            tableMinGraphic.style["display"] = "block";
+            tableMaxGraphic.style["display"] = "none";
+          }
+          const perCentValue = `${12.5*tableMaximised}%`;
+          tableOuter.style["top"] = perCentValue;
+        } else if (tableMinimising && tableMaximised !== 0.0) {
+          tableMaximised -= tableMinMaxRate * deltaTime;
+          if (tableMaximised <= 0.0) {
+            tableMaximised = 0.0;
+            tableMinimising = false;
+            tableMinGraphic.style["display"] = "none";
+            tableMaxGraphic.style["display"] = "block";
+          }
+          const perCentValue = `${12.5*tableMaximised}%`;
+          tableOuter.style["top"] = perCentValue;
+        }
+      }
+
+      tableMinMaxButton.addEventListener("click", e => {
+        if (tableMaximised === 1.0) {
+          minimiseTable();
+        } else if (tableMaximised == 0.0) {
+          maximiseTable();
+        }
+      });
+      canvas.addEventListener("mousedown", e => {minimiseTable()});
+
       import init, { init_logging, get_memory, GraphFacade } from "./pkg/rust_wasm_centrality.js";
 
       init().then(async () => {
@@ -159,7 +228,6 @@
                                       window.innerWidth, window.innerHeight,
                                       displayScale);
 
-        const canvas = document.getElementById("graph-canvas");
         const touchMoveMulti = 3;
         let dragging = false;
         canvas.addEventListener("pointerdown", e => {dragging = true;});
@@ -168,7 +236,6 @@
         canvas.addEventListener("pointerleave", stopDragging);
         canvas.addEventListener("pointermove", e => {
           if (dragging) {
-            console.log(e);
             if (e.pointerType == "touch") {
               graph.pan_touch(-e.movementX * touchMoveMulti, e.movementY * touchMoveMulti);
             } else {
@@ -219,8 +286,12 @@
         const indexBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
 
+        let prevFrameTime = 0;
         const renderFrame = (now) => {
             webglUtils.resizeCanvasToDisplaySize(gl.canvas);
+            const deltaTime = (now - prevFrameTime) / 1000;
+            updateTablePosition(deltaTime);
+
             gl.viewport(0, 0, canvas.width, canvas.height);
             gl.clearColor(0, 0, 0, 0);
             gl.clear(gl.COLOR_BUFFER_BIT);
@@ -278,6 +349,7 @@
             const indexType = gl.UNSIGNED_SHORT;
             gl.drawElements(gl.LINES, count, indexType, offset);
 
+            prevFrameTime = now;
         };
         const updateEdgeBuffer = () => {
           const vertexIndicesLen = graph.get_vertex_indices_len();
