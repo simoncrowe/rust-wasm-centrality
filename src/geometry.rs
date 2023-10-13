@@ -1,4 +1,5 @@
 use serde::Serialize;
+use std::iter::Sum;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, SubAssign};
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
@@ -84,6 +85,18 @@ impl DivAssign<f32> for Vector2 {
             x: self.x / rhs,
             y: self.y / rhs,
         }
+    }
+}
+
+impl Sum<Self> for Vector2 {
+    fn sum<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = Self>,
+    {
+        iter.fold(Self { x: 0.0, y: 0.0 }, |a, b| Self {
+            x: a.x + b.x,
+            y: a.y + b.y,
+        })
     }
 }
 

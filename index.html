@@ -212,7 +212,7 @@
       });
       canvas.addEventListener("mousedown", e => {minimiseTable()});
 
-      import init, { init_logging, get_memory, GraphFacade } from "./pkg/rust_wasm_centrality.js";
+      import init, { init_logging, get_memory, GraphFacade, TouchSet } from "./pkg/rust_wasm_centrality.js";
 
       init().then(async () => {
         init_logging();
@@ -252,11 +252,33 @@
           e => graph.zoom_out()
         );
 
-        canvas.addEventListener("touchstart", e => {console.log("touchstart", e)});
-        canvas.addEventListener("touchend", e => {console.log("touchend", e)});
-        canvas.addEventListener("touchcancel", e => {console.log("touchcancel", e)});
-        canvas.addEventListener("touchmove", e => {console.log("touchmove", e)});
-
+        const makeTouchSet = touches => {
+          const locs = [];
+          const ids = [];
+          for (const touch of touches) {
+            locs.push(touch.pageX, touch.pageY);
+            locs.push(touch.identifier);
+          }
+          const locsArr = new Float32Array(locs);
+          const idsArr = new Int32Array(ids);
+          return TouchSet.new(locsArr, idsArr);
+        }
+        canvas.addEventListener("touchstart", e => {
+          console.log("touchstart", e);
+          graph.touch_start(makeTouchSet(e.touches));
+        });
+        canvas.addEventListener("touchmove", e => {
+          console.log("touchmove", e);
+          graph.touch_move(makeTouchSet(e.touches));
+        });
+        canvas.addEventListener("touchend", e => {
+          console.log("touchend", e);
+          graph.touch_end();
+        });
+        canvas.addEventListener("touchcancel", e => {
+          console.log("touchcancel", e);
+          graph.touch_end();
+        });
         const gl = canvas.getContext("webgl");
         if (!gl) {
           alert("Unable to render graph; your browser does not support WebGL.");
@@ -300,6 +322,7 @@
 
             graph.update_display_size(window.innerWidth, window.innerHeight);
             graph.update_clipspace_vertices();
+            graph.update_edges();
 
             const nodePageLocations = graph.get_visible_node_page_locations();
             document.querySelectorAll('.node-link').forEach( (link) => {
