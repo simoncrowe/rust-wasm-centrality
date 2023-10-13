@@ -190,8 +190,7 @@
             tableMinGraphic.style["display"] = "block";
             tableMaxGraphic.style["display"] = "none";
           }
-          const perCentValue = `${12.5*tableMaximised}%`;
-          tableOuter.style["top"] = perCentValue;
+          tableOuter.style["top"] = `${12.5*tableMaximised}%`;
         } else if (tableMinimising && tableMaximised !== 0.0) {
           tableMaximised -= tableMinMaxRate * deltaTime;
           if (tableMaximised <= 0.0) {
@@ -200,8 +199,7 @@
             tableMinGraphic.style["display"] = "none";
             tableMaxGraphic.style["display"] = "block";
           }
-          const perCentValue = `${12.5*tableMaximised}%`;
-          tableOuter.style["top"] = perCentValue;
+          tableOuter.style["top"] = `${12.5*tableMaximised}%`;
         }
       }
 
@@ -230,18 +228,14 @@
 
         const touchMoveMulti = 3;
         let dragging = false;
-        canvas.addEventListener("pointerdown", e => {dragging = true;});
+        canvas.addEventListener("mousedown", e => {dragging = true;});
         const stopDragging = e => {dragging = false};
-        canvas.addEventListener("pointerup", stopDragging);
-        canvas.addEventListener("pointerleave", stopDragging);
-        canvas.addEventListener("pointermove", e => {
+        canvas.addEventListener("mouseup", stopDragging);
+        canvas.addEventListener("mouseleave", stopDragging);
+        canvas.addEventListener("mousemove", e => {
           if (dragging) {
-            if (e.pointerType == "touch") {
-              graph.pan_touch(-e.movementX * touchMoveMulti, e.movementY * touchMoveMulti);
-            } else {
-              graph.pan(-e.movementX, e.movementY);
-            }
-          };
+            graph.pan(-e.movementX, e.movementY);
+          }
         });
         canvas.addEventListener('wheel', (e) => {
           if (e.deltaY < 0) {
@@ -251,12 +245,17 @@
             graph.zoom_out();
           }
         });
-        document.getElementById("zoom-in-button").addEventListener(
-          "click", e => graph.zoom_in()
+        document.getElementById("zoom-in-button").addEventListener("click",
+          e => graph.zoom_in()
         );
-        document.getElementById("zoom-out-button").addEventListener(
-          "click", e => graph.zoom_out()
+        document.getElementById("zoom-out-button").addEventListener("click",
+          e => graph.zoom_out()
         );
+
+        canvas.addEventListener("touchstart", e => {console.log("touchstart", e)});
+        canvas.addEventListener("touchend", e => {console.log("touchend", e)});
+        canvas.addEventListener("touchcancel", e => {console.log("touchcancel", e)});
+        canvas.addEventListener("touchmove", e => {console.log("touchmove", e)});
 
         const gl = canvas.getContext("webgl");
         if (!gl) {

@@ -80,10 +80,6 @@ impl GraphFacade {
         self.graph.get_vertex_indices_len()
     }
 
-    pub fn pan_touch(&mut self, x: f32, y: f32) {
-        self.graph.pan_touch(x, y);
-    }
-
     pub fn pan(&mut self, x: f32, y: f32) {
         self.graph.pan(x, y);
     }
@@ -153,8 +149,6 @@ pub struct GraphDisplay {
     display_height: f32,
     display_scale: f32,
     display_offset: geometry::Vector2,
-    pan_target: geometry::Vector2,
-    pan_actual: geometry::Vector2,
     clipspace_locations: geometry::Points,
     clipspace_vertices: Vec<f32>,
     vertex_indices: Vec<u16>,
@@ -175,16 +169,12 @@ impl GraphDisplay {
                 .to_clipspace(display_offset, &display_scale, &aspect_ratio);
         let clipspace_vertices = clipspace_locations.get_data();
         let vertex_indices: Vec<u16> = Vec::new();
-        let pan_target = geometry::Vector2 { x: 0.0, y: 0.0 };
-        let pan_actual = geometry::Vector2 { x: 0.0, y: 0.0 };
         GraphDisplay {
             layout,
             display_width,
             display_height,
             display_scale,
             display_offset,
-            pan_target,
-            pan_actual,
             clipspace_locations,
             clipspace_vertices,
             vertex_indices,
@@ -194,12 +184,6 @@ impl GraphDisplay {
     pub fn update_display_size(&mut self, display_width: f32, display_height: f32) {
         self.display_width = display_width;
         self.display_height = display_height;
-    }
-
-    pub fn pan_touch(&mut self, x: f32, y: f32) {
-        let pan_rate = self.get_pan_rate();
-        self.pan_target.x += x * pan_rate;
-        self.pan_target.y += y * pan_rate;
     }
 
     pub fn pan(&mut self, x: f32, y: f32) {
@@ -232,8 +216,6 @@ impl GraphDisplay {
                 }
             }
         }
-
-        self.update_pan();
 
         let aspect_ratio = self.get_aspect_ratio();
         self.clipspace_locations = self.layout.node_locations.to_clipspace(
@@ -284,35 +266,5 @@ impl GraphDisplay {
 
     fn get_pan_rate(&self) -> f32 {
         ((DISPLAY_PAN_RATE * 2.0) / self.display_scale) / self.display_height
-    }
-
-    fn update_pan(&mut self) {
-        let pan_rate = self.get_pan_rate();
-        let pan_target_unit = self.pan_target.unit();
-        match pan_target_unit {
-            Some(pan_target_unit) => {
-                self.pan_actual += self.pan_target * pan_rate;
-                if self.pan_target.magnitude() > pan_rate {
-                    self.pan_target -= pan_target_unit * pan_rate;
-                } else {
-                    self.pan_target = geometry::Vector2 { x: 0.0, y: 0.0 };
-                }
-            }
-            None => {
-                let pan_actual_unit = self.pan_actual.unit();
-                match pan_actual_unit {
-                    Some(pan_actual_unit) => {
-                        if self.pan_actual.magnitude() > pan_rate {
-                            self.pan_actual -= pan_actual_unit * pan_rate;
-                        } else {
-                            self.pan_actual = geometry::Vector2 { x: 0.0, y: 0.0 };
-                        }
-                    }
-                    None => {}
-                }
-            }
-        }
-
-        self.display_offset += self.pan_actual;
     }
 }
