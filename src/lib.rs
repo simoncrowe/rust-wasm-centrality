@@ -311,10 +311,11 @@ impl GraphDisplay {
             }
 
             let scale_addend: f32 = touches.as_slice().windows(2).map(input::touch_scale).sum();
+            debug!("Scale addend: {}", scale_addend);
             self.display_scale += scale_addend;
             let offset_addend: geometry::Vector2 =
                 touches.as_slice().windows(2).map(input::touch_offset).sum();
-            self.display_offset += offset_addend;
+            self.display_offset += (offset_addend * self.get_pan_rate());
 
             self.prev_touch = touches.pop();
             self.current_touches = Some(Vec::new());

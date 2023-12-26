@@ -257,7 +257,7 @@
           const ids = [];
           for (const touch of touches) {
             locs.push(touch.pageX, touch.pageY);
-            locs.push(touch.identifier);
+            ids.push(touch.identifier);
           }
           const locsArr = new Float32Array(locs);
           const idsArr = new Int32Array(ids);

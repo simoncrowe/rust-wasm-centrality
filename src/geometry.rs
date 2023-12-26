@@ -1,6 +1,6 @@
 use serde::Serialize;
 use std::iter::Sum;
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, SubAssign};
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, Sub, SubAssign};
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct Vector2 {
@@ -54,6 +54,17 @@ impl SubAssign for Vector2 {
             x: self.x - other.x,
             y: self.y - other.y,
         };
+    }
+}
+
+impl Sub for Vector2 {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self {
+        Self {
+            x: self.x - other.x,
+            y: self.y - other.y,
+        }
     }
 }
 
