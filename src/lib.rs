@@ -97,8 +97,8 @@ impl GraphFacade {
         self.graph.touch_move(touch);
     }
 
-    pub fn touch_end(&mut self) {
-        self.graph.touch_end();
+    pub fn touch_locked(&self) -> bool {
+        self.graph.touch_locked()
     }
 
     pub fn get_visible_node_page_locations(&self) -> Result<JsValue, JsValue> {
@@ -291,9 +291,8 @@ impl GraphDisplay {
             .push(touch);
     }
 
-    pub fn touch_end(&mut self) {
-        self.prev_touch = None;
-        self.current_touches = None;
+    pub fn touch_locked(&self) -> bool {
+        self.touch_active
     }
 
     fn update_display(&mut self) {
@@ -315,7 +314,7 @@ impl GraphDisplay {
             self.display_scale += scale_addend;
             let offset_addend: geometry::Vector2 =
                 touches.as_slice().windows(2).map(input::touch_offset).sum();
-            self.display_offset += (offset_addend * self.get_pan_rate());
+            self.display_offset += (offset_addend.flip_y() * self.get_pan_rate());
 
             self.prev_touch = touches.pop();
             self.current_touches = Some(Vec::new());

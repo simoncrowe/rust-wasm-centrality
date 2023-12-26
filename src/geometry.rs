@@ -26,6 +26,13 @@ impl Vector2 {
 
         Some(self / magnitude)
     }
+
+    pub fn flip_y(&self) -> Vector2 {
+        Vector2 {
+            x: self.x,
+            y: self.y - (2.0 * self.y),
+        }
+    }
 }
 
 impl Add for Vector2 {
