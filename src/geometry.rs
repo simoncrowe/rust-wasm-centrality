@@ -1,5 +1,6 @@
 use serde::Serialize;
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, SubAssign};
+use std::iter::Sum;
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, Sub, SubAssign};
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct Vector2 {
@@ -24,6 +25,13 @@ impl Vector2 {
         }
 
         Some(self / magnitude)
+    }
+
+    pub fn flip_y(&self) -> Vector2 {
+        Vector2 {
+            x: self.x,
+            y: self.y - (2.0 * self.y),
+        }
     }
 }
 
@@ -56,6 +64,17 @@ impl SubAssign for Vector2 {
     }
 }
 
+impl Sub for Vector2 {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self {
+        Self {
+            x: self.x - other.x,
+            y: self.y - other.y,
+        }
+    }
+}
+
 impl Mul<f32> for Vector2 {
     type Output = Self;
 
@@ -84,6 +103,18 @@ impl DivAssign<f32> for Vector2 {
             x: self.x / rhs,
             y: self.y / rhs,
         }
+    }
+}
+
+impl Sum<Self> for Vector2 {
+    fn sum<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = Self>,
+    {
+        iter.fold(Self { x: 0.0, y: 0.0 }, |a, b| Self {
+            x: a.x + b.x,
+            y: a.y + b.y,
+        })
     }
 }
 

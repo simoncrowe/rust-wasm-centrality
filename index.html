@@ -80,9 +80,10 @@
     <script src="webgl-utils.js"></script>
 </head>
   <body>
+    <code id="my-log">
     <canvas id="graph-canvas"></canvas>
     <div id="table-outer-container">
-      <div id="table-min-max-button">
+        <div id="table-min-max-button">
         <svg viewBox="0 0 20 10" height="1em" style="display: none;" id="table-max-graphic" >
           <g><path d="M 0,0 10,10 20,0 Z"/></g>
         </svg>
@@ -110,6 +111,31 @@
     </svg>
     </div>
     <script type="module" defer>
+
+      // TODO: get rid of this debug code
+      var baseLogFunction = console.log;
+      console.log = function(){
+          baseLogFunction.apply(console, arguments);
+
+          var args = Array.prototype.slice.call(arguments);
+          for(var i=0;i<args.length;i++){
+              var node = createLogNode(args[i]);
+              //document.querySelector("#my-log").appendChild(node);
+          }
+
+      }
+      function createLogNode(message){
+          var node = document.createElement("div");
+          var textNode = document.createTextNode(message);
+          node.appendChild(textNode);
+          return node;
+      }
+      window.onerror = function(message, url, linenumber) {
+          console.log("JavaScript error: " + message + " on line " +
+              linenumber + " for " + url);
+      }
+
+
       const accountsData = [];
       const nodeLocations = [];
       const tableBody = document.getElementById("table-body");
@@ -190,8 +216,7 @@
             tableMinGraphic.style["display"] = "block";
             tableMaxGraphic.style["display"] = "none";
           }
-          const perCentValue = `${12.5*tableMaximised}%`;
-          tableOuter.style["top"] = perCentValue;
+          tableOuter.style["top"] = `${12.5*tableMaximised}%`;
         } else if (tableMinimising && tableMaximised !== 0.0) {
           tableMaximised -= tableMinMaxRate * deltaTime;
           if (tableMaximised <= 0.0) {
@@ -200,8 +225,7 @@
             tableMinGraphic.style["display"] = "none";
             tableMaxGraphic.style["display"] = "block";
           }
-          const perCentValue = `${12.5*tableMaximised}%`;
-          tableOuter.style["top"] = perCentValue;
+          tableOuter.style["top"] = `${12.5*tableMaximised}%`;
         }
       }
 
@@ -214,7 +238,7 @@
       });
       canvas.addEventListener("mousedown", e => {minimiseTable()});
 
-      import init, { init_logging, get_memory, GraphFacade } from "./pkg/rust_wasm_centrality.js";
+      import init, { init_logging, get_memory, GraphFacade, TouchSet } from "./pkg/rust_wasm_centrality.js";
 
       init().then(async () => {
         init_logging();
@@ -230,18 +254,14 @@
 
         const touchMoveMulti = 3;
         let dragging = false;
-        canvas.addEventListener("pointerdown", e => {dragging = true;});
+        canvas.addEventListener("mousedown", e => {dragging = true;});
         const stopDragging = e => {dragging = false};
-        canvas.addEventListener("pointerup", stopDragging);
-        canvas.addEventListener("pointerleave", stopDragging);
-        canvas.addEventListener("pointermove", e => {
+        canvas.addEventListener("mouseup", stopDragging);
+        canvas.addEventListener("mouseleave", stopDragging);
+        canvas.addEventListener("mousemove", e => {
           if (dragging) {
-            if (e.pointerType == "touch") {
-              graph.pan_touch(-e.movementX * touchMoveMulti, e.movementY * touchMoveMulti);
-            } else {
-              graph.pan(-e.movementX, e.movementY);
-            }
-          };
+            graph.pan(-e.movementX, e.movementY);
+          }
         });
         canvas.addEventListener('wheel', (e) => {
           if (e.deltaY < 0) {
@@ -250,13 +270,35 @@
           else {
             graph.zoom_out();
           }
+          minimiseTable();
         });
-        document.getElementById("zoom-in-button").addEventListener(
-          "click", e => graph.zoom_in()
+        document.getElementById("zoom-in-button").addEventListener("click",
+          e => graph.zoom_in()
         );
-        document.getElementById("zoom-out-button").addEventListener(
-          "click", e => graph.zoom_out()
+        document.getElementById("zoom-out-button").addEventListener("click",
+          e => graph.zoom_out()
         );
+
+        const makeTouchSet = touches => {
+          const locs = [];
+          const ids = [];
+          for (const touch of touches) {
+            locs.push(touch.pageX, touch.pageY);
+            ids.push(touch.identifier);
+          }
+          const locsArr = new Float32Array(locs);
+          const idsArr = new Int32Array(ids);
+          return TouchSet.new(locsArr, idsArr);
+        }
+        canvas.addEventListener("touchstart", e => {
+          //console.log("Received touchstart");
+          graph.touch_start(makeTouchSet(event.touches));
+          minimiseTable();
+        });
+        canvas.addEventListener("touchmove", e => {
+          //console.log("touchmove", e);
+          graph.touch_move(makeTouchSet(event.touches));
+        });
 
         const gl = canvas.getContext("webgl");
         if (!gl) {
@@ -301,6 +343,7 @@
 
             graph.update_display_size(window.innerWidth, window.innerHeight);
             graph.update_clipspace_vertices();
+            graph.update_edges();
 
             const nodePageLocations = graph.get_visible_node_page_locations();
             document.querySelectorAll('.node-link').forEach( (link) => {
