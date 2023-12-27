@@ -14,10 +14,6 @@ mod input;
 
 const DISPLAY_PAN_RATE: f32 = 1.0;
 const DISPLAY_ZOOM_RATE: f32 = 1.25;
-const CLIPSPACE_BOUNDS: geometry::Rect = geometry::Rect {
-    bottom_left: geometry::Vector2 { x: -1.0, y: -1.0 },
-    top_right: geometry::Vector2 { x: 1.0, y: 1.0 },
-};
 
 #[wasm_bindgen]
 pub fn init_logging() {
@@ -212,9 +208,21 @@ impl GraphDisplay {
     }
 
     pub fn get_visible_node_page_locations(&self) -> Result<JsValue, JsValue> {
+        let top_right_x = 1.0 - (75.0 / self.display_width * 2.0);
+        let bottom_left_y = -1.0 + (50.0 / self.display_width * 2.0);
+        let text_bounds: geometry::Rect = geometry::Rect {
+            bottom_left: geometry::Vector2 {
+                x: -1.0,
+                y: bottom_left_y,
+            },
+            top_right: geometry::Vector2 {
+                x: top_right_x,
+                y: 1.0,
+            },
+        };
         let mut locations: HashMap<usize, geometry::Vector2> = HashMap::new();
         for (node_id, loc) in self.clipspace_locations.iter().enumerate() {
-            if CLIPSPACE_BOUNDS.contains(loc) {
+            if text_bounds.contains(loc) {
                 let x = ((loc.x + 1.0) / 2.0) * self.display_width;
                 let y = self.display_height - (((loc.y + 1.0) / 2.0) * self.display_height);
                 locations.insert(node_id, geometry::Vector2 { x, y });

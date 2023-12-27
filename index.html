@@ -70,6 +70,8 @@
       .node-link {
         background-color: rgba(210, 210, 210, 0.75);
         z-index: 1;
+        overflow-wrap: anywhere;
+        overflow: hidden;
       }
       table {
         width: 100%;
@@ -246,7 +248,7 @@
         const nodeCount = accountsData.length;
         const spawnSize = nodeCount/5;
         let edgeCount = 0;
-        const displayScale = 0.15;
+        const displayScale = 0.12;
         const locsArray = new Float32Array(nodeLocations);
         const graph = GraphFacade.new(nodeCount, locsArray,
                                       window.innerWidth, window.innerHeight,
