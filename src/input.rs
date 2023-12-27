@@ -33,7 +33,7 @@ fn id_intersection(first: &TouchSet, second: &TouchSet) -> HashSet<i32> {
     first_keys.intersection(&second_keys).copied().collect()
 }
 
-pub fn touch_scale(sequence: &[TouchSet]) -> f32 {
+pub fn pinch_diff(sequence: &[TouchSet]) -> f32 {
     let first_set = &sequence[0];
     let second_set = &sequence[1];
     let common_ids = id_intersection(first_set, second_set);
@@ -59,7 +59,7 @@ pub fn touch_scale(sequence: &[TouchSet]) -> f32 {
             .expect("Key set should contain key in intersection");
         second_dist += (*second_a - *second_b).magnitude();
     }
-    return first_dist - second_dist;
+    second_dist - first_dist
 }
 
 pub fn touch_offset(sequence: &[TouchSet]) -> geometry::Vector2 {

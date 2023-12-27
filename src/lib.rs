@@ -298,20 +298,21 @@ impl GraphDisplay {
     fn update_display(&mut self) {
         if let Some(current_touches) = &self.current_touches {
             let mut touches = current_touches.clone();
-            debug!("Length of current_touches: {}", touches.len());
             if let Some(prev_touch) = &self.prev_touch {
-                debug!("Adding prev_touch to touches");
                 touches.insert(0, prev_touch.clone());
             }
-            debug!("Total length of touches: {}", touches.len());
 
             if touches.len() < 2 {
                 return;
             }
 
-            let scale_addend: f32 = touches.as_slice().windows(2).map(input::touch_scale).sum();
-            debug!("Scale addend: {}", scale_addend);
-            self.display_scale += scale_addend;
+            let pinch: f32 = touches.as_slice().windows(2).map(input::pinch_diff).sum();
+            debug!("Pinch diff: {}", pinch);
+            if pinch > 0.0 {
+                self.zoom_in()
+            } else if pinch < 0.0 {
+                self.zoom_out()
+            }
             let offset_addend: geometry::Vector2 =
                 touches.as_slice().windows(2).map(input::touch_offset).sum();
             self.display_offset += (offset_addend.flip_y() * self.get_pan_rate());

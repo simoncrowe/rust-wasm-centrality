@@ -120,7 +120,7 @@
           var args = Array.prototype.slice.call(arguments);
           for(var i=0;i<args.length;i++){
               var node = createLogNode(args[i]);
-              document.querySelector("#my-log").appendChild(node);
+              //document.querySelector("#my-log").appendChild(node);
           }
 
       }
@@ -270,6 +270,7 @@
           else {
             graph.zoom_out();
           }
+          minimiseTable();
         });
         document.getElementById("zoom-in-button").addEventListener("click",
           e => graph.zoom_in()
@@ -290,11 +291,12 @@
           return TouchSet.new(locsArr, idsArr);
         }
         canvas.addEventListener("touchstart", e => {
-          console.log("Received touchstart");
+          //console.log("Received touchstart");
           graph.touch_start(makeTouchSet(event.touches));
+          minimiseTable();
         });
         canvas.addEventListener("touchmove", e => {
-          console.log("touchmove", e);
+          //console.log("touchmove", e);
           graph.touch_move(makeTouchSet(event.touches));
         });
 
