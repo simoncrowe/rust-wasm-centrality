@@ -213,7 +213,7 @@ impl GraphDisplay {
 
     pub fn get_visible_node_page_locations(&self) -> Result<JsValue, JsValue> {
         let top_right_x = 1.0 - (100.0 / self.display_width * 2.0);
-        let bottom_left_y = -1.0 + (50.0 / self.display_width * 2.0);
+        let bottom_left_y = -1.0 + (35.0 / self.display_width * 2.0);
         let text_bounds: geometry::Rect = geometry::Rect {
             bottom_left: geometry::Vector2 {
                 x: -1.0,
