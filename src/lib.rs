@@ -13,6 +13,7 @@ mod geometry;
 mod input;
 
 const DISPLAY_PAN_RATE: f32 = 1.0;
+const AUTOPAN_RATE_MUL: f32 = 512.0;
 const DISPLAY_ZOOM_RATE: f32 = 1.25;
 
 #[wasm_bindgen]
@@ -93,12 +94,12 @@ impl GraphFacade {
         self.graph.touch_move(touch);
     }
 
-    pub fn touch_locked(&self) -> bool {
-        self.graph.touch_locked()
-    }
-
     pub fn get_visible_node_page_locations(&self) -> Result<JsValue, JsValue> {
         self.graph.get_visible_node_page_locations()
+    }
+
+    pub fn autopan(&mut self, node_id: usize) {
+        self.graph.autopan(node_id);
     }
 }
 
@@ -156,10 +157,11 @@ pub struct GraphDisplay {
     display_offset: geometry::Vector2,
     current_touches: Option<Vec<input::TouchSet>>,
     prev_touch: Option<input::TouchSet>,
-    touch_active: bool,
     clipspace_locations: geometry::Points,
     clipspace_vertices: Vec<f32>,
     vertex_indices: Vec<u16>,
+    autopanning: bool,
+    autopan_dest: geometry::Vector2,
 }
 
 impl GraphDisplay {
@@ -173,13 +175,14 @@ impl GraphDisplay {
         let display_offset = layout.node_locations.get_point(0);
         let prev_touch = None;
         let current_touches = None;
-        let touch_active = false;
         let clipspace_locations =
             layout
                 .node_locations
                 .to_clipspace(display_offset, &display_scale, &aspect_ratio);
         let clipspace_vertices = clipspace_locations.get_data();
         let vertex_indices: Vec<u16> = Vec::new();
+        let autopanning = false;
+        let autopan_dest = display_offset;
         GraphDisplay {
             layout,
             display_width,
@@ -188,10 +191,11 @@ impl GraphDisplay {
             display_offset,
             current_touches,
             prev_touch,
-            touch_active,
             clipspace_locations,
             clipspace_vertices,
             vertex_indices,
+            autopanning,
+            autopan_dest,
         }
     }
 
@@ -208,8 +212,8 @@ impl GraphDisplay {
     }
 
     pub fn get_visible_node_page_locations(&self) -> Result<JsValue, JsValue> {
-        let top_right_x = 1.0 - (75.0 / self.display_width * 2.0);
-        let bottom_left_y = -1.0 + (50.0 / self.display_width * 2.0);
+        let top_right_x = 1.0 - (100.0 / self.display_width * 2.0);
+        let bottom_left_y = -1.0 + (35.0 / self.display_width * 2.0);
         let text_bounds: geometry::Rect = geometry::Rect {
             bottom_left: geometry::Vector2 {
                 x: -1.0,
@@ -274,6 +278,7 @@ impl GraphDisplay {
     }
 
     pub fn pan(&mut self, x: f32, y: f32) {
+        self.autopanning = false;
         let pan_rate = self.get_pan_rate();
         self.display_offset.x += x * pan_rate;
         self.display_offset.y += y * pan_rate;
@@ -288,6 +293,7 @@ impl GraphDisplay {
     }
 
     pub fn touch_start(&mut self, touch: input::TouchSet) {
+        self.autopanning = false;
         self.prev_touch = None;
         self.current_touches = Some(vec![touch]);
     }
@@ -299,11 +305,21 @@ impl GraphDisplay {
             .push(touch);
     }
 
-    pub fn touch_locked(&self) -> bool {
-        self.touch_active
-    }
-
     fn update_display(&mut self) {
+        if self.autopanning {
+            //let autopan_rate = self.get_pan_rate() * self.display_scale * AUTOPAN_RATE_MUL;
+            let autopan_rate = self.get_pan_rate() * AUTOPAN_RATE_MUL;
+            let diff = self.autopan_dest - self.display_offset;
+            if diff.magnitude() <= autopan_rate {
+                self.display_offset = self.autopan_dest;
+                self.autopanning = false;
+            } else {
+                let direction = diff
+                    .unit()
+                    .expect("Diff vector should have non-zero magnitude");
+                self.display_offset += direction * autopan_rate;
+            }
+        }
         if let Some(current_touches) = &self.current_touches {
             let mut touches = current_touches.clone();
             if let Some(prev_touch) = &self.prev_touch {
@@ -315,7 +331,6 @@ impl GraphDisplay {
             }
 
             let pinch: f32 = touches.as_slice().windows(2).map(input::pinch_diff).sum();
-            debug!("Pinch diff: {}", pinch);
             if pinch > 0.0 {
                 self.zoom_in()
             } else if pinch < 0.0 {
@@ -336,5 +351,14 @@ impl GraphDisplay {
 
     fn get_pan_rate(&self) -> f32 {
         ((DISPLAY_PAN_RATE * 2.0) / self.display_scale) / self.display_height
+    }
+
+    pub fn autopan(&mut self, node_id: usize) {
+        self.autopan_dest = self.layout.node_locations.get_point(node_id);
+        self.autopanning = true
+    }
+
+    pub fn autopan_in_progress(&self) -> bool {
+        self.autopanning
     }
 }

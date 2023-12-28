@@ -10,6 +10,13 @@
         margin: 0;
         padding: 0;
         height: 100%;
+        font-family: sans-serif;
+      }
+      a {
+        color: #002FA7;
+      }
+      a:visited {
+        color: #000B67;
       }
       #graph-canvas {
         position:absolute;
@@ -24,7 +31,7 @@
         margin: auto;
         width: 320px;
         height: 75%;
-        background-color: rgba(210, 210, 210, 0.75);
+        background-color: rgba(210, 210, 210, 0.7);
         z-index: 2;
       }
       #table-inner-container {
@@ -35,7 +42,7 @@
       }
       #table-min-max-button {
         height: 3%;
-        background-color: rgba(190, 190, 190, 0.75);
+        background-color: rgba(190, 190, 190, 0.7);
         border: 1px solid #999;
         text-align: center;
       }
@@ -46,6 +53,15 @@
         margin: 0 auto;
       }
       #table-min-max-button:hover {
+        background-color: rgba(190, 190, 190, 1);
+      }
+      .focus-button {
+        margin: 0 0.4em 0 0;
+        padding: 0.2em 0.3em 0 0.3em;
+        font-size: 1.6em;
+        color: #522;
+      }
+      .focus-button:hover {
         background-color: rgba(190, 190, 190, 1);
       }
       #zoom-container {
@@ -68,7 +84,7 @@
         stroke: #444;
       }
       .node-link {
-        background-color: rgba(210, 210, 210, 0.75);
+        background-color: rgba(210, 210, 210, 0.7);
         z-index: 1;
         overflow-wrap: anywhere;
         overflow: hidden;
@@ -76,7 +92,7 @@
       table {
         width: 100%;
         margin: 0.5em;
-        font-size: 0.9em;
+        font-size: 1em;
       }
     </style>
     <script src="webgl-utils.js"></script>
@@ -137,7 +153,6 @@
               linenumber + " for " + url);
       }
 
-
       const accountsData = [];
       const nodeLocations = [];
       const tableBody = document.getElementById("table-body");
@@ -162,6 +177,14 @@
         const link = createLink(text, url);
         linkData.appendChild(link);
         row.appendChild(linkData);
+
+        const focusBtnData = document.createElement("td");
+        const focusBtn = document.createElement("div");
+        focusBtn.textContent = "*";
+        focusBtn.className = "focus-button";
+        focusBtn.title = `Center on ${text}`;
+        focusBtnData.appendChild(focusBtn);
+        row.appendChild(focusBtnData);
 
         tableBody.appendChild(row);
       };
@@ -253,6 +276,14 @@
         const graph = GraphFacade.new(nodeCount, locsArray,
                                       window.innerWidth, window.innerHeight,
                                       displayScale);
+
+        document.querySelectorAll("tr").forEach(row => {
+          const nodeID = parseInt(row.children[0].textContent) - 1
+          const focusBtn = row.children[2].children[0];
+          focusBtn.onclick = () => {
+            graph.autopan(nodeID);
+          };
+        });
 
         const touchMoveMulti = 3;
         let dragging = false;
@@ -348,7 +379,7 @@
             graph.update_edges();
 
             const nodePageLocations = graph.get_visible_node_page_locations();
-            document.querySelectorAll('.node-link').forEach( (link) => {
+            document.querySelectorAll('.node-link').forEach(link => {
               const accountId = parseInt(link.id.substring(1));
               if (!nodePageLocations.has(accountId)) {
                 link.remove();
