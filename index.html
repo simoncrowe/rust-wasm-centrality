@@ -10,7 +10,7 @@
         margin: 0;
         padding: 0;
         height: 100%;
-        font-family: sans-serif;
+        font-family: monospace;
       }
       a {
         color: #002FA7;
@@ -25,6 +25,8 @@
       }
       #table-outer-container {
         position: absolute;
+        display: flex;
+        flex-direction: column;
         left: 0;
         right: 0;
         top: 12.5%;
@@ -34,14 +36,9 @@
         background-color: rgba(210, 210, 210, 0.7);
         z-index: 2;
       }
-      #table-inner-container {
-        position: sticky;
-        height: 97%;
-        overflow-x: clip;
-        overflow-y: scroll;
-      }
       #table-min-max-button {
-        height: 3%;
+        height: 16px;
+        flex: initial;
         background-color: rgba(190, 190, 190, 0.7);
         border: 1px solid #999;
         text-align: center;
@@ -54,6 +51,24 @@
       }
       #table-min-max-button:hover {
         background-color: rgba(190, 190, 190, 1);
+      }
+      #table-search-container {
+        height: 20px;
+        flex: initial;
+        padding: 8px 45px 6px 40px;
+      }
+      #table-search-container>input {
+        width: 100%;
+      }
+      #table-inner-container {
+        flex-grow: 1;
+        overflow-x: clip;
+        overflow-y: scroll;
+      }
+      table {
+        width: 100%;
+        margin: 0.5em;
+        font-size: 1em;
       }
       .focus-button {
         margin: 0 0.4em 0 0;
@@ -89,25 +104,23 @@
         overflow-wrap: anywhere;
         overflow: hidden;
       }
-      table {
-        width: 100%;
-        margin: 0.5em;
-        font-size: 1em;
-      }
     </style>
     <script src="webgl-utils.js"></script>
 </head>
   <body>
-    <code id="my-log">
+    <code id="my-log"></code>
     <canvas id="graph-canvas"></canvas>
     <div id="table-outer-container">
-        <div id="table-min-max-button">
+      <div id="table-min-max-button">
         <svg viewBox="0 0 20 10" height="1em" style="display: none;" id="table-max-graphic" >
           <g><path d="M 0,0 10,10 20,0 Z"/></g>
         </svg>
         <svg viewBox="0 0 20 10" height="1em" id="table-min-graphic">
           <g><path d="M 0,10 10,0 20,10 Z"/></g>
         </svg>
+      </div>
+      <div id="table-search-container">
+        <input type="search" name="search" placeholder="search"/>
       </div>
       <div id="table-inner-container">
         <table>
@@ -209,6 +222,7 @@
       const canvas = document.getElementById("graph-canvas");
       const tableOuter = document.getElementById("table-outer-container");
       const tableInner = document.getElementById("table-inner-container");
+      const tableSearch = document.getElementById("table-search-container");
       const tableMinMaxButton = document.getElementById("table-min-max-button");
       const tableMinGraphic = document.getElementById("table-min-graphic");
       const tableMaxGraphic = document.getElementById("table-max-graphic");
@@ -220,8 +234,9 @@
         if (tableMaximised === 1.0) {
           tableMinimising = true;
           tableInner.style["display"] = "none";
-          tableOuter.style["height"] = "1.25em";
-          tableMinMaxButton.style["height"] = "100%";
+          tableSearch.style["display"] = "none";
+          tableOuter.style["height"] = "auto";
+          //tableMinMaxButton.style["height"] = "100%";
         }
       };
       const maximiseTable = () => {
@@ -235,9 +250,10 @@
           if (tableMaximised >= 1.0) {
             tableMaximised = 1.0;
             tableMaximising = false;
+            tableSearch.style["display"] = "block";
             tableInner.style["display"] = "block";
             tableOuter.style["height"] = "75%";
-            tableMinMaxButton.style["height"] = "3%";
+            //tableMinMaxButton.style["height"] = "20px";
             tableMinGraphic.style["display"] = "block";
             tableMaxGraphic.style["display"] = "none";
           }
@@ -283,6 +299,19 @@
           focusBtn.onclick = () => {
             graph.autopan(nodeID);
           };
+        });
+
+        const searchInput = document.querySelector("input");
+        searchInput.addEventListener("input", e => {
+          document.querySelectorAll("tr").forEach(row => {
+            const searchTerm = e.target.value.toUpperCase();
+            const nodeText = row.children[1].textContent.toUpperCase();
+            if (nodeText.indexOf(searchTerm) !== -1) {
+              row.style["display"] = "table-row"
+            } else {
+              row.style["display"] = "none"
+            }
+          });
         });
 
         const touchMoveMulti = 3;
