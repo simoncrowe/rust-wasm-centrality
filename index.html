@@ -4,13 +4,16 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1 user-scalable=no" />
     <title>GRAPH</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
     <style type="text/css">
       body, html {
         user-select: none;
         margin: 0;
         padding: 0;
         height: 100%;
-        font-family: monospace;
+        font-family: "Roboto Mono", monospace;
       }
       a {
         color: #002FA7;
@@ -29,7 +32,7 @@
         flex-direction: column;
         left: 0;
         right: 0;
-        top: 12.5%;
+        top: 0;
         margin: auto;
         width: 320px;
         height: 75%;
@@ -49,16 +52,17 @@
         fill: #555;
         margin: 0 auto;
       }
-      #table-min-max-button:hover {
+      table-min-max-button:hover {
         background-color: rgba(190, 190, 190, 1);
       }
       #table-search-container {
         height: 20px;
         flex: initial;
-        padding: 8px 45px 6px 40px;
+        padding: 16px 45px 6px 40px;
       }
       #table-search-container>input {
         width: 100%;
+        font-size: 1em;
       }
       #table-inner-container {
         flex-grow: 1;
@@ -103,6 +107,7 @@
         z-index: 1;
         overflow-wrap: anywhere;
         overflow: hidden;
+        font-size: 0.9em;
       }
     </style>
     <script src="webgl-utils.js"></script>
@@ -110,19 +115,19 @@
   <body>
     <code id="my-log"></code>
     <canvas id="graph-canvas"></canvas>
-    <div id="table-outer-container">
+    <div id="table-outer-container" style="height: auto">
       <div id="table-min-max-button">
-        <svg viewBox="0 0 20 10" height="1em" style="display: none;" id="table-max-graphic" >
+        <svg viewBox="0 0 20 10" height="1em" id="table-max-graphic" >
           <g><path d="M 0,0 10,10 20,0 Z"/></g>
         </svg>
-        <svg viewBox="0 0 20 10" height="1em" id="table-min-graphic">
+        <svg viewBox="0 0 20 10" height="1em" style="display: none;" id="table-min-graphic">
           <g><path d="M 0,10 10,0 20,10 Z"/></g>
         </svg>
       </div>
-      <div id="table-search-container">
+      <div id="table-search-container" style="display: none;">
         <input type="search" name="search" placeholder="search"/>
       </div>
-      <div id="table-inner-container">
+      <div id="table-inner-container" style="display: none;">
         <table>
           <tbody id="table-body"></tbody>
         </table>
@@ -226,7 +231,7 @@
       const tableMinMaxButton = document.getElementById("table-min-max-button");
       const tableMinGraphic = document.getElementById("table-min-graphic");
       const tableMaxGraphic = document.getElementById("table-max-graphic");
-      let tableMaximised = 1.0;
+      let tableMaximised = 0.0;
       let tableMaximising = false;
       let tableMinimising = false;
 
@@ -285,9 +290,8 @@
         init_logging();
         const wasmMemory = get_memory();
         const nodeCount = accountsData.length;
-        const spawnSize = nodeCount/5;
         let edgeCount = 0;
-        const displayScale = 0.12;
+        const displayScale = 0.0011;
         const locsArray = new Float32Array(nodeLocations);
         const graph = GraphFacade.new(nodeCount, locsArray,
                                       window.innerWidth, window.innerHeight,
