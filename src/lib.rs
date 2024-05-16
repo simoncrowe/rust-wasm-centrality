@@ -109,6 +109,7 @@ pub struct GraphLayout {
     node_locations: geometry::Points,
     loading_node_index: usize,
     edges_loaded: usize,
+    loading_remainder: Option<u8>,
 }
 
 impl GraphLayout {
@@ -122,10 +123,23 @@ impl GraphLayout {
             node_locations,
             loading_node_index: 0,
             edges_loaded: 0,
+            loading_remainder: None,
         }
     }
     pub fn load_edges(&mut self, chunk_array: js_sys::Uint8Array) {
-        let chunk_buffer = chunk_array.to_vec();
+        let mut chunk_buffer = chunk_array.to_vec();
+
+        if let Some(leftover) = self.loading_remainder {
+            chunk_buffer.insert(0, leftover);
+            self.loading_remainder = None;
+        }
+        if chunk_buffer.len() % 2 == 1 {
+            self.loading_remainder = chunk_buffer.pop();
+        }
+
+        // TODO: remove debug assert
+        assert!(chunk_buffer.len() % 2 == 0);
+
         let mut numbers = vec![0; chunk_buffer.len() / 2];
         LittleEndian::read_u16_into(&chunk_buffer, &mut numbers);
         debug!("Getting targets for node {}...", self.loading_node_index);
@@ -135,6 +149,12 @@ impl GraphLayout {
                 self.loading_node_index += 1;
             } else {
                 let target_index = num as usize;
+
+                if self.node_targets.len() < target_index {
+                    debug!("usize target index: {}", num);
+                    debug!("u16 target index: {}", num);
+                }
+
                 self.node_targets
                     .get_mut(self.loading_node_index)
                     .unwrap()

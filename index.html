@@ -484,7 +484,6 @@
             while(true) {
               const {done, value} = await respReader.read();
               if (done && value === undefined) {break;}
-
               graph.load_edges(value);
               renderFrameWithEdgeBuffer();
             }
