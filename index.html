@@ -123,7 +123,7 @@
 </head>
   <body>
     <code id="my-log"></code>
-    <a id="about-link" href="./about.html" target="_blank"><em>i</em></a>
+    <a id="about-link" href="/about.html"><em>i</em></a>
     <canvas id="graph-canvas"></canvas>
     <div id="table-outer-container" style="height: auto">
       <div id="table-min-max-button">
@@ -157,29 +157,6 @@
       </svg>
     </div>
     <script type="module" defer>
-
-      // TODO: get rid of this debug code
-      var baseLogFunction = console.log;
-      console.log = function(){
-          baseLogFunction.apply(console, arguments);
-
-          var args = Array.prototype.slice.call(arguments);
-          for(var i=0;i<args.length;i++){
-              var node = createLogNode(args[i]);
-              //document.querySelector("#my-log").appendChild(node);
-          }
-
-      }
-      function createLogNode(message){
-          var node = document.createElement("div");
-          var textNode = document.createTextNode(message);
-          node.appendChild(textNode);
-          return node;
-      }
-      window.onerror = function(message, url, linenumber) {
-          console.log("JavaScript error: " + message + " on line " +
-              linenumber + " for " + url);
-      }
 
       const accountsData = [];
       const nodeLocations = [];
@@ -367,19 +344,23 @@
           return TouchSet.new(locsArr, idsArr);
         }
         canvas.addEventListener("touchstart", e => {
-          //console.log("Received touchstart");
           graph.touch_start(makeTouchSet(event.touches));
           minimiseTable();
         });
         canvas.addEventListener("touchmove", e => {
-          //console.log("touchmove", e);
           graph.touch_move(makeTouchSet(event.touches));
         });
 
         const gl = canvas.getContext("webgl");
         if (!gl) {
-          alert("Unable to render graph; your browser does not support WebGL.");
-          // TODO: destroy any visible DOM elements that refer to the graph
+          window.setInterval(() => {
+            updateTablePosition(0.05)
+          }, 50);
+          document.getElementById("zoom-container").remove();
+          document.querySelectorAll('.focus-button').forEach(e => e.remove());
+          canvas.remove()
+          alert("Unable to render graph; your browser does not support WebGL. Feel free to browse the table.");
+          maximiseTable();
           return
         }
         webglUtils.resizeCanvasToDisplaySize(gl.canvas);

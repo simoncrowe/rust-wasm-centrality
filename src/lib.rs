@@ -137,9 +137,6 @@ impl GraphLayout {
             self.loading_remainder = chunk_buffer.pop();
         }
 
-        // TODO: remove debug assert
-        assert!(chunk_buffer.len() % 2 == 0);
-
         let mut numbers = vec![0; chunk_buffer.len() / 2];
         LittleEndian::read_u16_into(&chunk_buffer, &mut numbers);
         debug!("Getting targets for node {}...", self.loading_node_index);
