@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1 user-scalable=no" />
     <title>GRAPH</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
     <style type="text/css">
       body, html {
         user-select: none;
@@ -109,11 +109,21 @@
         overflow: hidden;
         font-size: 0.9em;
       }
+      #about-link {
+        float: right;
+        position: relative;
+        font-family: serif;
+        text-decoration: none;
+        margin: 0.2em 0.6em 0 0;
+        z-index: 2;
+        font-size: 1.8em;
+      }
     </style>
     <script src="webgl-utils.js"></script>
 </head>
   <body>
     <code id="my-log"></code>
+    <a id="about-link" href="./about.html" target="_blank"><em>i</em></a>
     <canvas id="graph-canvas"></canvas>
     <div id="table-outer-container" style="height: auto">
       <div id="table-min-max-button">
@@ -144,7 +154,7 @@
           <path
            d="M 25 5 A 20 20 0 0 0 5 25 A 20 20 0 0 0 25 45 A 20 20 0 0 0 45 25 A 20 20 0 0 0 25 5 z M 11 22 L 39 22 L 39 28 L 11 28 L 11 22 z" />
         </g>
-    </svg>
+      </svg>
     </div>
     <script type="module" defer>
 

@@ -3,6 +3,7 @@
 /pkg
 nodes.json
 targets.bin
+about.html
 
 .pre-commit-config.yaml
 cspell.config.yaml
