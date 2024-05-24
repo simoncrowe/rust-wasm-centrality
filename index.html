@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
     <style type="text/css">
       body, html {
+        touch-action: none;
         user-select: none;
         margin: 0;
         padding: 0;
@@ -110,11 +111,13 @@
         font-size: 0.9em;
       }
       #about-link {
+        background-color: rgba(210, 210, 210, 0.7);
+        padding: 0 0.2em;
         float: right;
         position: relative;
         font-family: serif;
         text-decoration: none;
-        margin: 0.2em 0.6em 0 0;
+        margin: 0.2em 0.4em 0 0;
         z-index: 2;
         font-size: 1.8em;
       }
@@ -279,10 +282,11 @@
         const nodeCount = accountsData.length;
         let edgeCount = 0;
         const displayScale = 0.0011;
+        const autopanRate = 2048.0;
         const locsArray = new Float32Array(nodeLocations);
         const graph = GraphFacade.new(nodeCount, locsArray,
                                       window.innerWidth, window.innerHeight,
-                                      displayScale);
+                                      displayScale, autopanRate);
 
         document.querySelectorAll("tr").forEach(row => {
           const nodeID = parseInt(row.children[0].textContent) - 1
@@ -399,7 +403,7 @@
             gl.enableVertexAttribArray(positionAttrLoc);
 
             graph.update_display_size(window.innerWidth, window.innerHeight);
-            graph.update_clipspace_vertices();
+            graph.update_clipspace_vertices(deltaTime);
             graph.update_edges();
 
             const nodePageLocations = graph.get_visible_node_page_locations();

@@ -2,7 +2,6 @@ use byteorder::{ByteOrder, LittleEndian};
 
 use js_sys;
 use log::{debug, Level};
-use serde::Serialize;
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsValue;
@@ -13,8 +12,8 @@ mod geometry;
 mod input;
 
 const DISPLAY_PAN_RATE: f32 = 1.0;
-const AUTOPAN_RATE_MUL: f32 = 512.0;
 const DISPLAY_ZOOM_RATE: f32 = 1.25;
+const DISPLAY_ZOOM_RATE_PINCH: f32 = 1.125;
 
 #[wasm_bindgen]
 pub fn init_logging() {
@@ -40,9 +39,16 @@ impl GraphFacade {
         display_width: f32,
         display_height: f32,
         display_scale: f32,
+        autopan_rate_mul: f32,
     ) -> GraphFacade {
         let layout = GraphLayout::new(node_count, node_locations);
-        let display = GraphDisplay::new(layout, display_width, display_height, display_scale);
+        let display = GraphDisplay::new(
+            layout,
+            display_width,
+            display_height,
+            display_scale,
+            autopan_rate_mul,
+        );
         GraphFacade { graph: display }
     }
 
@@ -58,8 +64,8 @@ impl GraphFacade {
         self.graph.update_edges()
     }
 
-    pub fn update_clipspace_vertices(&mut self) {
-        self.graph.update_clipspace_vertices();
+    pub fn update_clipspace_vertices(&mut self, delta_time: f32) {
+        self.graph.update_clipspace_vertices(delta_time);
     }
 
     pub fn get_vertices_ptr(&self) -> *const f32 {
@@ -179,6 +185,7 @@ pub struct GraphDisplay {
     vertex_indices: Vec<u16>,
     autopanning: bool,
     autopan_dest: geometry::Vector2,
+    autopan_rate_mul: f32,
 }
 
 impl GraphDisplay {
@@ -187,6 +194,7 @@ impl GraphDisplay {
         display_width: f32,
         display_height: f32,
         display_scale: f32,
+        autopan_rate_mul: f32,
     ) -> GraphDisplay {
         let aspect_ratio = display_width / display_height;
         let display_offset = layout.node_locations.get_point(0);
@@ -213,6 +221,7 @@ impl GraphDisplay {
             vertex_indices,
             autopanning,
             autopan_dest,
+            autopan_rate_mul,
         }
     }
 
@@ -283,8 +292,8 @@ impl GraphDisplay {
         self.display_height = display_height;
     }
 
-    pub fn update_clipspace_vertices(&mut self) {
-        self.update_display();
+    pub fn update_clipspace_vertices(&mut self, delta_time: f32) {
+        self.update_display(delta_time);
         let aspect_ratio = self.get_aspect_ratio();
         self.clipspace_locations = self.layout.node_locations.to_clipspace(
             self.display_offset,
@@ -322,10 +331,9 @@ impl GraphDisplay {
             .push(touch);
     }
 
-    fn update_display(&mut self) {
+    fn update_display(&mut self, delta_time: f32) {
         if self.autopanning {
-            //let autopan_rate = self.get_pan_rate() * self.display_scale * AUTOPAN_RATE_MUL;
-            let autopan_rate = self.get_pan_rate() * AUTOPAN_RATE_MUL;
+            let autopan_rate = self.autopan_rate_mul * delta_time;
             let diff = self.autopan_dest - self.display_offset;
             if diff.magnitude() <= autopan_rate {
                 self.display_offset = self.autopan_dest;
@@ -349,13 +357,13 @@ impl GraphDisplay {
 
             let pinch: f32 = touches.as_slice().windows(2).map(input::pinch_diff).sum();
             if pinch > 0.0 {
-                self.zoom_in()
+                self.display_scale *= DISPLAY_ZOOM_RATE_PINCH;
             } else if pinch < 0.0 {
-                self.zoom_out()
+                self.display_scale /= DISPLAY_ZOOM_RATE_PINCH;
             }
             let offset_addend: geometry::Vector2 =
                 touches.as_slice().windows(2).map(input::touch_offset).sum();
-            self.display_offset += (offset_addend.flip_y() * self.get_pan_rate());
+            self.display_offset += offset_addend.flip_y() * self.get_pan_rate();
 
             self.prev_touch = touches.pop();
             self.current_touches = Some(Vec::new());

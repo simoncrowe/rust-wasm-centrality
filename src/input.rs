@@ -1,7 +1,6 @@
 use super::geometry;
 use itertools::Itertools;
 use js_sys;
-use log::debug;
 use std::collections::{HashMap, HashSet};
 use wasm_bindgen::prelude::*;
 

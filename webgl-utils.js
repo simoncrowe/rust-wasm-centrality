@@ -182,7 +182,7 @@
    * @memberOf module:webgl-utils
    */
   function resizeCanvasToDisplaySize(canvas, multiplier) {
-    multiplier = multiplier || 1;
+    multiplier = multiplier || window.devicePixelRatio;
     const width  = canvas.clientWidth  * multiplier | 0;
     const height = canvas.clientHeight * multiplier | 0;
     if (canvas.width !== width ||  canvas.height !== height) {
