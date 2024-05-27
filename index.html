@@ -14,6 +14,7 @@
         margin: 0;
         padding: 0;
         height: 100%;
+        overflow: hidden;
         font-family: "Roboto Mono", monospace;
       }
       a {
@@ -106,8 +107,7 @@
       .node-link {
         background-color: rgba(210, 210, 210, 0.7);
         z-index: 1;
-        overflow-wrap: anywhere;
-        overflow: hidden;
+        overflow-wrap: normal;
         font-size: 0.9em;
       }
       #about-link {
@@ -278,15 +278,16 @@
 
       init().then(async () => {
         init_logging();
+        let edgeCount = 0;
         const wasmMemory = get_memory();
         const nodeCount = accountsData.length;
-        let edgeCount = 0;
+        const locsArray = new Float32Array(nodeLocations);
         const displayScale = 0.0011;
         const autopanRate = 2048.0;
-        const locsArray = new Float32Array(nodeLocations);
+        const focusNodeIdx = 0;
         const graph = GraphFacade.new(nodeCount, locsArray,
                                       window.innerWidth, window.innerHeight,
-                                      displayScale, autopanRate);
+                                      displayScale, autopanRate, focusNodeIdx);
 
         document.querySelectorAll("tr").forEach(row => {
           const nodeID = parseInt(row.children[0].textContent) - 1
