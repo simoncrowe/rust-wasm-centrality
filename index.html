@@ -284,7 +284,17 @@
         const locsArray = new Float32Array(nodeLocations);
         const displayScale = 0.0011;
         const autopanRate = 2048.0;
-        const focusNodeIdx = 0;
+
+        let focusNodeIdx;
+        const params = new URLSearchParams(document.location.search);
+        const nodeIdxVal = params.get("n");
+        const nodeIdxNum = parseInt(nodeIdxVal);
+        if (nodeIdxNum === NaN) {
+          focusNodeIdx = 0;
+        } else {
+          focusNodeIdx = Math.max(0, Math.min(nodeIdxNum, nodeCount-1));
+        }
+
         const graph = GraphFacade.new(nodeCount, locsArray,
                                       window.innerWidth, window.innerHeight,
                                       displayScale, autopanRate, focusNodeIdx);
